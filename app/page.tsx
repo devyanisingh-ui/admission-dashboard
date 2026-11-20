@@ -225,9 +225,9 @@ function GroupSection() {
           />
         }
       >
-        <div className="overflow-x-auto scroll-thin">
+        <div className="max-h-[420px] overflow-auto scroll-thin">
           <table className="w-full text-sm tabular">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-white shadow-[inset_0_-1px_0_var(--color-slate-200)]">
               <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
                 <th className="w-10 px-3 py-2 text-left font-medium">#</th>
                 <th className="px-3 py-2 text-left font-medium">School</th>
