@@ -403,7 +403,7 @@ function FabsView({ locs, t }: { locs: Location[]; t: T }) {
         <SnapshotCard theme="green" icon={GraduationCap} label="New admissions (fee paid)" value={t.enrolled} change={null} sub="Admission no. generated" />
         <SnapshotCard theme="blue" icon={Users} label="Active roster" value={strength} change={null} sub="Current strength" />
         <SnapshotCard theme="rose" icon={UserMinus} label="Withdrawals" value={t.withdrawnNew + t.withdrawnExisting} change={null} sub={`${t.withdrawnNew} new · ${t.withdrawnExisting} existing`} />
-        <SnapshotCard theme={t.unmapped ? "orange" : "green"} icon={GitMerge} label="Unmapped to LeadSquared" value={t.unmapped} change={null} sub="Awaiting Admission Mapping" />
+        <SnapshotCard theme={t.unmapped ? "orange" : "green"} icon={GitMerge} label="Unmapped to LeadSquared" value={t.unmapped} change={null} sub="Not yet linked to a lead" />
       </div>
 
       <div className="mt-4 grid items-start gap-4 xl:grid-cols-5">
@@ -445,7 +445,7 @@ function FabsView({ locs, t }: { locs: Location[]; t: T }) {
       </Card>
       <div className="mt-3">
         <Note>
-          FABS has no LeadSquared lead ID — each new admission is linked through Admission Mapping. Admission category (EWS/DG) and refund status are pending
+          FABS has no LeadSquared lead ID — each new admission has to be linked to its lead. Admission category (EWS/DG) and refund status are pending
           confirmation (open item #7).
         </Note>
       </div>

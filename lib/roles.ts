@@ -33,9 +33,6 @@ export type Permission =
   | "view.marketing"
   | "view.location"
   | "view.systems"
-  | "view.mapping"
-  | "mapping.act"
-  | "mapping.override"
   | "view.planning"
   | "seat.edit"
   | "seat.requestChange"
@@ -65,9 +62,6 @@ const MATRIX: Record<Permission, RoleId[]> = {
   "view.marketing": ["locHead", "principal", "verticalHead", "leadership", "centralAdmin"],
   "view.location": ALL_BUT_SYS,
   "view.systems": ALL_BUT_SYS,
-  "view.mapping": ["counsellor", "locHead", "principal", "verticalHead", "centralAdmin"],
-  "mapping.act": ["counsellor", "locHead", "centralAdmin"],
-  "mapping.override": ["locHead", "verticalHead", "centralAdmin"],
   "view.planning": ["locHead", "principal", "verticalHead", "leadership", "centralAdmin"],
   "seat.edit": ["locHead", "centralAdmin"],
   "seat.requestChange": ["locHead"],

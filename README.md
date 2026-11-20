@@ -48,7 +48,6 @@ Open <http://localhost:3000>.
 - **Download Centre** — every report as Excel (CSV) or a printable PDF, plus locked weekly / monthly snapshots.
 
 ### Operations
-- **Admission Mapping** — link FABS admissions to LeadSquared leads (suggested matches, manual search, direct admissions).
 - **System Views** — raw records and sync status from each source system.
 - **Alerts** — seat-fill, close-out, unmapped-admission and sync alerts.
 
