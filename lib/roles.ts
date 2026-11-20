@@ -41,6 +41,7 @@ export type Permission =
   | "seat.requestChange"
   | "seat.approve"
   | "targets.edit"
+  | "marketing.edit"
   | "view.masters"
   | "status.edit"
   | "status.approve"
@@ -71,7 +72,9 @@ const MATRIX: Record<Permission, RoleId[]> = {
   "seat.edit": ["locHead", "centralAdmin"],
   "seat.requestChange": ["locHead"],
   "seat.approve": ["verticalHead"],
-  "targets.edit": ["verticalHead"],
+  "targets.edit": ["verticalHead", "centralAdmin"],
+  /** Enter budget, spend, social media and partner figures. */
+  "marketing.edit": ["locHead", "centralAdmin"],
   "view.masters": ["verticalHead", "centralAdmin", "sysAdmin"],
   "status.edit": ["centralAdmin"],
   "status.approve": ["verticalHead"],

@@ -11,7 +11,9 @@ import { LocationPicker, useCurrentLocation } from "@/components/location-picker
 import { Badge, Button, Card, EmptyState, Guard, Note, PageHeader, ProgressBar, Select, Tabs, fmt, fmtPct } from "@/components/ui";
 import { useApp } from "@/lib/context";
 import { downloadCsv } from "@/lib/export";
-import { locationUnits, pct, type Location, type SeatField, type SeatValues, type UnitStats } from "@/lib/data";
+import { defaultTarget, locationUnits, pct, type Location, type SeatField, type SeatValues, type UnitStats } from "@/lib/data";
+import { EntryToast, useEntryStore } from "@/components/entry-kit";
+import { targetKey } from "@/lib/marketing";
 import {
   FIELD_LABEL, LIVE_PLAN_CYCLE, planCyclesFor, blankValues, createMatrix, diffRows, matrixOf, parseSeatCsv, templateRows, updateMatrix, withIntake,
   type ChangeRequest, type CreateMethod, type HistoryEntry, type ParsedUpload, type PlanCycle,
@@ -787,10 +789,11 @@ function HistoryCard({ history }: { history: HistoryEntry[] }) {
 /* ------------------------------------------------------------------ */
 
 function Targets() {
-  const { can, cycle } = useApp();
+  const { can, cycle, seatVersion } = useApp();
   const loc = useCurrentLocation();
   const canEdit = can("targets.edit");
-  const units = useMemo(() => locationUnits(loc.id, cycle), [loc.id, cycle]);
+  const units = useMemo(() => locationUnits(loc.id, cycle), [loc.id, cycle, seatVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  const entry = useEntryStore();
   const [targets, setTargets] = useState<Record<string, number>>({});
   const unitLabel = loc.vertical === "Schools" ? "Grade" : "Programme";
   const tgt = (u: UnitStats) => targets[u.unit] ?? u.target;
@@ -798,7 +801,22 @@ function Targets() {
   const enrolled = units.reduce((s, u) => s + u.enrolled, 0);
   const seats = units.reduce((s, u) => s + u.seats, 0);
   const behind = units.filter((u) => pct(u.enrolled, tgt(u)) < 80).sort((a, b) => pct(a.enrolled, tgt(a)) - pct(b.enrolled, tgt(b)));
-  const changed = Object.keys(targets).length;
+  const changed = units.filter((u) => targets[u.unit] !== undefined && targets[u.unit] !== u.target).length;
+  const saveTargets = () => {
+    const list = units.filter((u) => targets[u.unit] !== undefined && targets[u.unit] !== u.target);
+    if (list.length) {
+      entry.commitStore("Target", "Updated", `${loc.short} · ${list.length} target${list.length === 1 ? "" : "s"}`, list.map((u) => `${u.unit} ${u.target} → ${targets[u.unit]}`).join(", "), (s) => {
+        const next = { ...s.targets };
+        for (const u of list) {
+          const key = targetKey(cycle, loc.id, u.unit);
+          if (targets[u.unit] === defaultTarget(loc.id, u.unit, cycle)) delete next[key];
+          else next[key] = targets[u.unit];
+        }
+        return { ...s, targets: next };
+      });
+    }
+    setTargets({});
+  };
 
   return (
     <>
@@ -807,7 +825,7 @@ function Targets() {
           canEdit && changed > 0 ? (
             <>
               <Button size="sm" variant="ghost" onClick={() => setTargets({})}>Discard</Button>
-              <Button size="sm" variant="primary" onClick={() => setTargets({})}><Check size={13} /> Save {changed} target{changed === 1 ? "" : "s"}</Button>
+              <Button size="sm" variant="primary" onClick={saveTargets}><Check size={13} /> Save {changed} target{changed === 1 ? "" : "s"}</Button>
             </>
           ) : undefined
         }
@@ -865,7 +883,7 @@ function Targets() {
                           <input
                             type="number"
                             value={t}
-                            onChange={(e) => setTargets((x) => ({ ...x, [u.unit]: Number(e.target.value) }))}
+                            onChange={(e) => setTargets((x) => ({ ...x, [u.unit]: Math.max(0, Math.round(Number(e.target.value) || 0)) }))}
                             title={targets[u.unit] !== undefined ? `Was ${u.target}` : undefined}
                             className={clsx(
                               "w-20 rounded-md border px-2 py-1 text-right text-sm tabular outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20",
@@ -926,6 +944,7 @@ function Targets() {
           {loc.vertical === "Higher Ed" && <Note tone="warn">Open item #4: Higher Ed target structure (per programme or per batch) to be confirmed.</Note>}
         </div>
       </div>
+      <EntryToast text={entry.toast} onClose={entry.clearToast} />
     </>
   );
 }

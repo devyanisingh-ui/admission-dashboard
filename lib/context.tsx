@@ -3,7 +3,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { EMPTY_STORE, overridesOf, reviveStore, type SeatStore } from "./seat-matrix";
 import { reviveMasters, seedMasters, STORAGE_KEY as MASTERS_KEY, type MasterStore } from "./masters";
-import { allLocations, applyMasters, CURRENT_CYCLE, CYCLE_MONTHS, LOCATIONS, locationById, setSeatOverrides, type Board, type Cycle, type Location, type SourceGroup, type Vertical } from "./data";
+import { EMPTY_MARKETING, MARKETING_KEY, reviveMarketing, setMarketingData, type MarketingStore } from "./marketing";
+import { allLocations, applyMasters, CURRENT_CYCLE, CYCLE_MONTHS, LOCATIONS, locationById, setSeatOverrides, setTargetOverrides, type Board, type Cycle, type Location, type SourceGroup, type Vertical } from "./data";
 
 /** Date-range presets within the admission cycle (Oct → Sep). */
 export type DateRange = "cycle" | "h1" | "h2" | "last6" | "last3" | "custom";
@@ -125,7 +126,10 @@ interface AppState {
   /** Master data (locations, grades, sources, reasons, status mapping, cycles) from the Masters page. */
   masters: MasterStore;
   setMasters: (f: (s: MasterStore) => MasterStore) => void;
-  /** Bumps whenever saved seats or master data change, so memoised figures recompute. */
+  /** Manually entered budget, spend, social media, partner and target figures. */
+  marketing: MarketingStore;
+  setMarketing: (f: (s: MarketingStore) => MarketingStore) => void;
+  /** Bumps whenever saved seats, master data or entered figures change, so memoised figures recompute. */
   seatVersion: number;
   lockedVertical: boolean;
   lockedLocation: boolean;
@@ -195,6 +199,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
+  // Manually entered figures: handed to the report functions before anything re-renders.
+  const [mkt, setMkt] = useState<{ store: MarketingStore; version: number }>({ store: EMPTY_MARKETING, version: 0 });
+  const applyMarketing = (store: MarketingStore) => {
+    setMarketingData(store);
+    setTargetOverrides(store.targets);
+  };
+  const setMarketing = (f: (s: MarketingStore) => MarketingStore) =>
+    setMkt((cur) => {
+      const store = f(cur.store);
+      if (store === cur.store) return cur;
+      applyMarketing(store);
+      try {
+        localStorage.setItem(MARKETING_KEY, JSON.stringify(store));
+      } catch {}
+      return { store, version: cur.version + 1 };
+    });
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(MARKETING_KEY);
+      const store = raw ? reviveMarketing(JSON.parse(raw)) : null;
+      if (store) {
+        applyMarketing(store);
+        setMkt((cur) => ({ store, version: cur.version + 1 }));
+      }
+    } catch {}
+  }, []);
+
   // Picking a school globally also drives single-location pages, and vice versa.
   const setSchool = (id: string) => {
     setSchoolState(id);
@@ -255,14 +286,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       school: effectiveSchool, setSchool,
       grade, setGrade, sourceGroup, setSourceGroup, dateRange, setDateRange, customRange, setCustomRange,
       allowedLocations, filteredLocations,
-      seatStore: seat.store, setSeatStore, seatVersion: seat.version + master.version,
+      seatStore: seat.store, setSeatStore, seatVersion: seat.version + master.version + mkt.version,
+      marketing: mkt.store, setMarketing,
       masters: master.store, setMasters,
       lockedVertical: scope === "location" || scope === "vertical",
       lockedLocation: scope === "location",
       can: (p) => can(role, p),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role, vertical, board, cycle, locationId, school, grade, sourceGroup, dateRange, customRange, seat, master]);
+  }, [role, vertical, board, cycle, locationId, school, grade, sourceGroup, dateRange, customRange, seat, master, mkt]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

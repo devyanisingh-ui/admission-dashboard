@@ -2,11 +2,12 @@
 
 import clsx from "clsx";
 import { AlertTriangle, Award, ClipboardList, GraduationCap, IndianRupee, PiggyBank, Target, Users, Wallet } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Panel, SnapshotCard, SOURCE_COLORS } from "@/components/dashboard-widgets";
 import { ExportButtons } from "@/components/export-buttons";
-import { Guard, PageHeader, fmt, fmtINR } from "@/components/ui";
+import { Guard, PageHeader, Tabs, fmt, fmtINR } from "@/components/ui";
+import { BudgetEntry } from "./entry";
 import { useApp } from "@/lib/context";
 import { pct } from "@/lib/data";
 import { outreachByActivity, outreachMonthly, outreachTotals, type OutreachRow } from "@/lib/marketing";
@@ -23,9 +24,10 @@ export default function BudgetPage() {
 }
 
 function Budget() {
-  const { filteredLocations, cycle } = useApp();
+  const { filteredLocations, cycle, seatVersion, can } = useApp();
+  const [tab, setTab] = useState<"report" | "entry">("report");
   const ids = filteredLocations.map((l) => l.id);
-  const key = ids.join() + cycle;
+  const key = ids.join() + cycle + seatVersion;
   const rows = useMemo(() => outreachByActivity(ids, cycle), [key]);
   const t = useMemo(() => outreachTotals(ids, cycle), [key]);
   const monthly = useMemo(() => outreachMonthly(ids, cycle), [key]);
@@ -43,7 +45,7 @@ function Budget() {
     <>
       <PageHeader
         title="Budget & Outreach"
-        subtitle={`Allocation and spend are entered in the dashboard · leads from LeadSquared · admissions from FABS (matched to a lead) · session ${cycle.replace("-", "–")}`}
+        subtitle={`Budget and spend are entered by hand · leads from LeadSquared · admissions from FABS (matched to a lead) · session ${cycle.replace("-", "–")}`}
         actions={
           <ExportButtons
             name={`budget-outreach-${cycle}`}
@@ -52,6 +54,15 @@ function Budget() {
         }
       />
 
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: "report", label: "Report" },
+          { id: "entry", label: <>Data entry {can("marketing.edit") && <span className="ml-1 rounded bg-brand-50 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-brand-700">Edit</span>}</> },
+        ]}
+      />
+      {tab === "entry" ? <BudgetEntry /> : <>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
         <SnapshotCard theme="blue" icon={Wallet} label="Budget allocated" value={fmtINR(t.allocated)} change={null} sub={`${filteredLocations.length} school${filteredLocations.length === 1 ? "" : "s"} · annual plan`} />
         <SnapshotCard theme="orange" icon={IndianRupee} label="Actual spend" value={fmtINR(t.spent)} change={null} sub={`${util.toFixed(0)}% of budget utilised`} />
@@ -208,6 +219,7 @@ function Budget() {
           </div>
         </Panel>
       )}
+      </>}
     </>
   );
 }
@@ -238,7 +250,7 @@ function Highlight({ icon: Icon, tone, title, value, detail }: { icon: typeof Aw
 function UtilisationRow({ r }: { r: OutreachRow }) {
   const u = pct(r.spent, r.allocated);
   const over = r.spent > r.allocated;
-  const scale = Math.max(r.allocated, r.spent);
+  const scale = Math.max(1, r.allocated, r.spent);
   return (
     <li>
       <div className="flex items-baseline justify-between gap-3 text-sm">

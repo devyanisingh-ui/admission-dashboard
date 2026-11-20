@@ -126,7 +126,7 @@ export const REPORT_DEFS: ReportDef[] = [
   },
   {
     id: "budget", name: "Budget & Outreach", group: "Marketing & outreach", sources: ["Dashboard", "LeadSquared", "FABS"], status: "ok",
-    desc: "Allocation, actual spend, activities and outcomes (leads, admissions, cost per lead / admission)",
+    desc: "Allocation, actual spend and activities (entered) with outcomes (leads, admissions, cost per lead / admission)",
     build: (ids, cycle) =>
       ids.flatMap((id) =>
         outreachByActivity([id], cycle).map((a) => ({
@@ -137,24 +137,24 @@ export const REPORT_DEFS: ReportDef[] = [
   },
   {
     id: "social", name: "Social Media", group: "Marketing & outreach", sources: ["Dashboard", "LeadSquared"], status: "ok",
-    desc: "Reach, impressions, interactions and prospects by platform and campaign",
+    desc: "Reach, impressions, interactions and prospects by platform and campaign (entered)",
     build: (ids, cycle) => [
       ...socialByPlatform(ids, cycle).map((p) => ({
-        Section: "Platform", Platform: p.platform, Campaign: "", Month: "", Reach: p.reach, Impressions: p.impressions, Interactions: p.interactions,
+        Section: "Platform", Platform: p.platform, Campaign: "", School: "All", Month: "", Reach: p.reach, Impressions: p.impressions, Interactions: p.interactions,
         "Engagement %": p1(p.engagement), Prospects: p.prospects,
       })),
       ...socialCampaigns(ids, cycle).map((c) => ({
-        Section: "Campaign", Platform: c.platform, Campaign: c.name, Month: c.month, Reach: c.reach, Impressions: "", Interactions: c.clicks,
+        Section: "Campaign", Platform: c.platform, Campaign: c.name, School: locationById(c.locationId).short, Month: c.month, Reach: c.reach, Impressions: "", Interactions: c.clicks,
         "Engagement %": "", Prospects: c.leads,
       })),
       ...socialMonthly(ids, cycle).map((m) => ({
-        Section: "Month", Platform: "All", Campaign: "", Month: m.month, Reach: m.reach, Impressions: "", Interactions: "", "Engagement %": "", Prospects: m.prospects,
+        Section: "Month", Platform: "All", Campaign: "", School: "All", Month: m.month, Reach: m.reach, Impressions: "", Interactions: "", "Engagement %": "", Prospects: m.prospects,
       })),
     ],
   },
   {
     id: "partners", name: "Partners", group: "Marketing & outreach", sources: ["Dashboard", "LeadSquared", "FABS"], status: "ok",
-    desc: "Connected partners (preschools, crèches, corporates, RWAs) with leads shared and conversion",
+    desc: "Connected partners (preschools, crèches, corporates, RWAs) with leads shared and conversion (entered)",
     build: (ids, cycle) => {
       const ps = partnersFor(ids, cycle);
       return [

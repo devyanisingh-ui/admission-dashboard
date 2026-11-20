@@ -1,12 +1,13 @@
 "use client";
 
 import clsx from "clsx";
-import { AlertTriangle, Armchair, DoorOpen, GraduationCap, Percent, Target } from "lucide-react";
+import { AlertTriangle, Armchair, DoorOpen, GraduationCap, Pencil, Percent, Target } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Heatmap, HeatList, type HeatRow } from "@/components/charts";
 import { GradeVacancy, Panel, SnapshotCard, fillColor } from "@/components/dashboard-widgets";
 import { ExportButtons } from "@/components/export-buttons";
-import { Guard, PageHeader, ProgressBar, fmt, fmtPct } from "@/components/ui";
+import { TargetsEditor } from "@/components/targets-editor";
+import { Button, Guard, PageHeader, ProgressBar, fmt, fmtPct } from "@/components/ui";
 import { useApp } from "@/lib/context";
 import { dashboardData } from "@/lib/dashboard";
 import { locationById, locationUnits, pct, schoolGrades } from "@/lib/data";
@@ -43,7 +44,8 @@ const signed = (n: number) => (n >= 0 ? `+${fmt(n)}` : `−${fmt(-n)}`);
 const achTone = (a: number) => (a >= 95 ? "bg-emerald-500" : a >= ACH_WARN ? "bg-amber-400" : "bg-rose-500");
 
 function Grades() {
-  const { filteredLocations, cycle, seatVersion } = useApp();
+  const { filteredLocations, cycle, seatVersion, can } = useApp();
+  const [editTargets, setEditTargets] = useState(false);
   const ids = filteredLocations.map((l) => l.id);
   const d = useMemo(() => dashboardData({ ids, cycle, grade: "All", sourceGroup: "All", dateRange: "cycle" }), [ids.join(), cycle, seatVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   const isSchools = d.gradeVertical === "Schools";
@@ -112,6 +114,10 @@ function Grades() {
           </>
         }
         actions={
+          <div className="flex flex-wrap items-center gap-2">
+          {can("targets.edit") && heatLocs.length > 0 && (
+            <Button size="sm" onClick={() => setEditTargets(true)}><Pencil size={13} /> Edit targets</Button>
+          )}
           <ExportButtons
             name={`grade-wise-${cycle}`}
             rows={() =>
@@ -129,8 +135,10 @@ function Grades() {
               }))
             }
           />
+          </div>
         }
       />
+      {editTargets && <TargetsEditor locations={heatLocs} initialId={heatLocs.length === 1 ? heatLocs[0].id : undefined} onClose={() => setEditTargets(false)} />}
 
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
         <SnapshotCard theme="blue" icon={Armchair} label="Seats for new admission" value={tot.seats} change={null} sub={`Across ${rows.length} ${label.toLowerCase()}s`} />
@@ -275,7 +283,7 @@ function Grades() {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-2.5 text-[11px] text-slate-500">
           <span>
-            Seat fill uses net admissions (after withdrawals); target achievement uses FABS enrolled, as set in Admission targets.
+            Seat fill uses net admissions (after withdrawals); target achievement uses FABS enrolled against the targets entered here or in Seat Matrix &amp; Targets.
           </span>
           <span className="inline-flex items-center gap-1.5"><span className="h-3 w-0.5 rounded-sm bg-rose-300" /> Below {FILL_WARN}% fill or {ACH_WARN}% of target</span>
         </div>

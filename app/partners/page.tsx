@@ -1,13 +1,15 @@
 "use client";
 
 import clsx from "clsx";
-import { Award, GraduationCap, Handshake, Percent, Search, Users } from "lucide-react";
+import { Award, GraduationCap, Handshake, Lock, Percent, Plus, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Dropdown } from "@/components/dropdown";
 import { Panel, SnapshotCard } from "@/components/dashboard-widgets";
 import { ExportButtons } from "@/components/export-buttons";
-import { Badge, Guard, PageHeader, ProgressBar, fmt } from "@/components/ui";
+import { Badge, Button, Guard, PageHeader, ProgressBar, fmt } from "@/components/ui";
+import { EntryActions, EntryToast, StampCell, recentFirst, useEntryStore } from "@/components/entry-kit";
+import { DeletePartner, PartnerEditor } from "./entry";
 import { useApp } from "@/lib/context";
 import { locationById, pct } from "@/lib/data";
 import { partnerMonthly, partnersFor, PARTNER_TYPES, type Partner, type PartnerType } from "@/lib/marketing";
@@ -27,9 +29,13 @@ export default function PartnersPage() {
 type SortKey = "leadsShared" | "admissions" | "conversion" | "since";
 
 function Partners() {
-  const { filteredLocations, cycle } = useApp();
+  const { filteredLocations, cycle, seatVersion, can } = useApp();
   const ids = filteredLocations.map((l) => l.id);
-  const partners = useMemo(() => partnersFor(ids, cycle), [ids.join(), cycle]);
+  const partners = useMemo(() => partnersFor(ids, cycle), [ids.join(), cycle, seatVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  const canEdit = can("marketing.edit");
+  const entry = useEntryStore();
+  const [editing, setEditing] = useState<Partner | "new" | null>(null);
+  const [deleting, setDeleting] = useState<Partner | null>(null);
   const monthly = useMemo(() => partnerMonthly(partners), [partners]);
 
   const [type, setType] = useState<PartnerType | "All">("All");
@@ -62,7 +68,7 @@ function Partners() {
         (status === "all" || (status === "active") === p.active) &&
         (!s || p.name.toLowerCase().includes(s)),
     )
-    .sort((a, b) => (sort === "since" ? Date.parse(`01 ${a.since}`) - Date.parse(`01 ${b.since}`) : b[sort] - a[sort]));
+    .sort((a, b) => recentFirst(a, b) || (sort === "since" ? Date.parse(`01 ${a.since}`) - Date.parse(`01 ${b.since}`) : b[sort] - a[sort]));
   const shown = showAll ? filtered : filtered.slice(0, PAGE);
   const maxLeads = Math.max(1, ...partners.map((p) => p.leadsShared));
   const ft = filtered.reduce((a, p) => ({ leads: a.leads + p.leadsShared, adm: a.adm + p.admissions }), { leads: 0, adm: 0 });
@@ -71,7 +77,7 @@ function Partners() {
     <>
       <PageHeader
         title="Partners Report"
-        subtitle={`Preschools, crèches, corporates and RWAs that refer families · leads shared are tracked in LeadSquared, admissions in FABS · session ${cycle.replace("-", "–")}`}
+        subtitle={`Preschools, crèches, corporates and RWAs that refer families · partners and their figures are entered by hand · session ${cycle.replace("-", "–")}`}
         actions={
           <ExportButtons
             name={`partners-${cycle}`}
@@ -135,6 +141,13 @@ function Partners() {
         className="mt-4"
         title="Connected partners"
         sub={`${filtered.length} of ${partners.length} · ${fmt(ft.leads)} leads · ${fmt(ft.adm)} admissions`}
+        actions={
+          canEdit ? (
+            <Button variant="primary" size="sm" onClick={() => setEditing("new")}><Plus size={13} /> Add partner</Button>
+          ) : (
+            <Badge><Lock size={11} /> View only</Badge>
+          )
+        }
       >
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <label className="flex w-full items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 sm:w-56">
@@ -167,8 +180,8 @@ function Partners() {
           />
         </div>
 
-        <div className="overflow-x-auto scroll-thin">
-          <table className="w-full text-sm tabular">
+        <div className="relative overflow-x-auto scroll-thin">
+          <table className="w-full min-w-[900px] text-sm tabular">
             <thead>
               <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
                 <th className="px-3 py-2 text-left font-medium">Partner</th>
@@ -179,6 +192,8 @@ function Partners() {
                 <th className="px-3 py-2 text-right font-medium">Admissions</th>
                 <th className="px-3 py-2 text-right font-medium">Conversion</th>
                 <th className="px-3 py-2 text-left font-medium">Status</th>
+                <th className="px-3 py-2 text-left font-medium">Last updated</th>
+                {canEdit && <th className="px-3 py-2"><span className="sr-only">Actions</span></th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -204,10 +219,12 @@ function Partners() {
                   <td className="px-3 py-2 text-right">{fmt(p.admissions)}</td>
                   <td className={clsx("px-3 py-2 text-right font-semibold", p.conversion >= 18 ? "text-emerald-700" : p.conversion < 10 ? "text-rose-600" : "text-slate-800")}>{p.conversion.toFixed(0)}%</td>
                   <td className="px-3 py-2">{p.active ? <Badge tone="green">Active</Badge> : <Badge>Inactive</Badge>}</td>
+                  <td className="px-3 py-2"><StampCell s={p} /></td>
+                  {canEdit && <td className="px-3 py-2"><EntryActions canEdit label={p.name} onEdit={() => setEditing(p)} onDelete={() => setDeleting(p)} /></td>}
                 </tr>
               ))}
               {!filtered.length && (
-                <tr><td colSpan={8} className="px-3 py-6 text-center text-sm text-slate-500">No partners match.</td></tr>
+                <tr><td colSpan={canEdit ? 10 : 9} className="px-3 py-6 text-center text-sm text-slate-500">No partners match.</td></tr>
               )}
             </tbody>
           </table>
@@ -221,8 +238,12 @@ function Partners() {
             </button>
           </div>
         )}
-        <p className="mt-2 text-[11px] text-slate-500">Conversion: green 18%+, red under 10%. Partner names are invented demo data.</p>
+        <p className="mt-2 text-[11px] text-slate-500">Conversion: green 18%+, red under 10%. Leads by month are spread from each partner&apos;s session totals. Starting partner names are invented demo data.</p>
       </Panel>
+
+      {editing && <PartnerEditor row={editing === "new" ? null : editing} entry={entry} onClose={() => setEditing(null)} />}
+      {deleting && <DeletePartner row={deleting} entry={entry} onClose={() => setDeleting(null)} />}
+      <EntryToast text={entry.toast} onClose={entry.clearToast} />
     </>
   );
 }

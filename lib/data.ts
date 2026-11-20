@@ -242,12 +242,24 @@ export function setSeatOverrides(next: Map<string, SeatValues>) {
   seatOverrides = next;
 }
 
+/** Admission targets entered in the dashboard (key "cycle|locId|unit"), set by the app context. */
+let targetOverrides: Record<string, number> = {};
+export function setTargetOverrides(next: Record<string, number>) {
+  targetOverrides = next;
+}
+/** The target a grade / programme starts with, before any entered change. */
+export function defaultTarget(locId: string, unit: string, cycle: Cycle) {
+  return baseUnitStats(locId, unit, cycle).target;
+}
+
 export function unitStats(locId: string, unit: string, cycle: Cycle): UnitStats {
-  const base = baseUnitStats(locId, unit, cycle);
-  const o = seatOverrides.get(`${cycle}|${locId}|${unit}`);
-  if (!o) return base;
-  const ewsFilled = Math.min(base.ewsFilled, o.ewsSeats);
-  return { ...base, ...o, ewsFilled };
+  const key = `${cycle}|${locId}|${unit}`;
+  let s = baseUnitStats(locId, unit, cycle);
+  const o = seatOverrides.get(key);
+  if (o) s = { ...s, ...o, ewsFilled: Math.min(s.ewsFilled, o.ewsSeats) };
+  const t = targetOverrides[key];
+  if (t !== undefined) s = { ...s, target: t };
+  return s;
 }
 
 function emptyUnit(locId: string, unit: string): UnitStats {

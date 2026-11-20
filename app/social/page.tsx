@@ -7,18 +7,17 @@ import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, T
 import { Dropdown } from "@/components/dropdown";
 import { Panel, SnapshotCard } from "@/components/dashboard-widgets";
 import { ExportButtons } from "@/components/export-buttons";
-import { Guard, PageHeader, fmt, fmtINR } from "@/components/ui";
+import { Guard, PageHeader, Tabs, fmt, fmtINR } from "@/components/ui";
+import { PLATFORM_COLOR } from "./colors";
+import { SocialEntry } from "./entry";
 import { useApp } from "@/lib/context";
-import { CYCLE_MONTHS, pct } from "@/lib/data";
+import { CYCLE_MONTHS, locationById, pct } from "@/lib/data";
 import {
-  SOCIAL_PLATFORMS, SOCIAL_SHARE_OF_DIGITAL, socialByPlatform, socialCampaigns, socialMonthly, socialSpend, type SocialPlatform,
+  SOCIAL_PLATFORMS, socialByPlatform, socialCampaigns, socialMonthly, socialSpend, type SocialPlatform,
 } from "@/lib/marketing";
 
 const axis = { fontSize: 11, fill: "#64748b" };
 const compact = (v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(v >= 1e5 ? 0 : 1)}k` : String(v));
-const PLATFORM_COLOR: Record<SocialPlatform, string> = {
-  Instagram: "#db2777", Facebook: "#2563eb", YouTube: "#dc2626", LinkedIn: "#0369a1", "Google Business": "#16a34a",
-};
 
 export default function SocialPage() {
   return (
@@ -31,9 +30,11 @@ export default function SocialPage() {
 type CampSort = "leads" | "spend" | "reach" | "cpl" | "month";
 
 function Social() {
-  const { filteredLocations, cycle } = useApp();
+  const { filteredLocations, cycle, seatVersion, can } = useApp();
+  const [tab, setTab] = useState<"report" | "entry">("report");
   const ids = filteredLocations.map((l) => l.id);
-  const key = ids.join() + cycle;
+  const key = ids.join() + cycle + seatVersion;
+  const multi = filteredLocations.length > 1;
   const platforms = useMemo(() => socialByPlatform(ids, cycle), [key]);
   const monthly = useMemo(() => socialMonthly(ids, cycle), [key]);
   const campaigns = useMemo(() => socialCampaigns(ids, cycle), [key]);
@@ -57,7 +58,7 @@ function Social() {
     <>
       <PageHeader
         title="Social Media Reports"
-        subtitle={`Reach, engagement and prospects by platform and campaign · prospects are LeadSquared leads with a social source · session ${cycle.replace("-", "–")}`}
+        subtitle={`Reach, engagement and prospects by platform and campaign · figures are entered by hand from each platform's insights export · session ${cycle.replace("-", "–")}`}
         actions={
           <ExportButtons
             name={`social-media-${cycle}`}
@@ -66,6 +67,15 @@ function Social() {
         }
       />
 
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: "report", label: "Report" },
+          { id: "entry", label: <>Data entry {can("marketing.edit") && <span className="ml-1 rounded bg-brand-50 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-brand-700">Edit</span>}</> },
+        ]}
+      />
+      {tab === "entry" ? <SocialEntry /> : <>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
         <SnapshotCard theme="blue" icon={Radio} label="Reach" value={compact(reach)} change={null} sub="Unique accounts reached" />
         <SnapshotCard theme="violet" icon={Eye} label="Impressions" value={compact(impressions)} change={null} sub={`${(impressions / Math.max(1, reach)).toFixed(1)} views per account`} />
@@ -108,7 +118,7 @@ function Social() {
                       <div className="flex items-center gap-2">
                         <span className="w-10 text-right font-semibold">{fmt(p.prospects)}</span>
                         <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
-                          <div className="h-full rounded-full" style={{ width: `${(p.prospects / topProspects.prospects) * 100}%`, background: PLATFORM_COLOR[p.platform] }} />
+                          <div className="h-full rounded-full" style={{ width: `${(p.prospects / Math.max(1, topProspects.prospects)) * 100}%`, background: PLATFORM_COLOR[p.platform] }} />
                         </div>
                         <span className="w-8 text-right text-[11px] text-slate-400">{pct(p.prospects, prospects).toFixed(0)}%</span>
                       </div>
@@ -148,7 +158,7 @@ function Social() {
       <Panel
         className="mt-4"
         title="Paid campaigns"
-        sub={`${SOCIAL_SHARE_OF_DIGITAL * 100}% of the Digital ads spend on the Budget & Outreach page`}
+        sub={`${campaigns.length} campaign${campaigns.length === 1 ? "" : "s"} entered${multi ? ` across ${new Set(campaigns.map((c) => c.locationId)).size} schools` : ""}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Dropdown<CampSort>
@@ -179,6 +189,7 @@ function Social() {
             <thead>
               <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
                 <th className="px-3 py-2 text-left font-medium">Campaign</th>
+                {multi && <th className="px-3 py-2 text-left font-medium">School</th>}
                 <th className="px-3 py-2 text-left font-medium">Platform</th>
                 <th className="px-3 py-2 text-left font-medium">Month</th>
                 <th className="px-3 py-2 text-right font-medium">Spend</th>
@@ -191,8 +202,9 @@ function Social() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {shown.map((c) => (
-                <tr key={c.name} className="hover:bg-slate-50">
+                <tr key={c.id} className="hover:bg-slate-50">
                   <td className="px-3 py-2 font-medium">{c.name}</td>
+                  {multi && <td className="px-3 py-2 text-slate-600">{locationById(c.locationId).short}</td>}
                   <td className="px-3 py-2">
                     <span className="inline-flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full" style={{ background: PLATFORM_COLOR[c.platform] }} />
@@ -210,7 +222,7 @@ function Social() {
               ))}
               {shown.length > 0 && (
                 <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-                  <td className="px-3 py-2" colSpan={3}>Total{platform !== "All" && ` · ${platform}`}</td>
+                  <td className="px-3 py-2" colSpan={multi ? 4 : 3}>Total{platform !== "All" && ` · ${platform}`}</td>
                   <td className="px-3 py-2 text-right">{fmtINR(camp.spend)}</td>
                   <td className="px-3 py-2 text-right">{compact(camp.reach)}</td>
                   <td className="px-3 py-2 text-right">{fmt(camp.clicks)}</td>
@@ -220,16 +232,17 @@ function Social() {
                 </tr>
               )}
               {!shown.length && (
-                <tr><td colSpan={9} className="px-3 py-6 text-center text-sm text-slate-500">No paid campaigns on {platform}.</td></tr>
+                <tr><td colSpan={multi ? 10 : 9} className="px-3 py-6 text-center text-sm text-slate-500">No paid campaigns on {platform}.</td></tr>
               )}
             </tbody>
           </table>
         </div>
         <p className="mt-2 text-[11px] text-slate-500">
-          Paid campaigns account for about 70% of social prospects; the rest come from organic posts. Green = lowest cost per prospect.
-          Platform metrics would come from each platform&apos;s insights export (mock data here).
+          Campaign prospects are part of each platform&apos;s total prospects (the rest come from organic posts). Green = lowest cost per prospect.
+          Add or correct figures in the Data entry tab.
         </p>
       </Panel>
+      </>}
     </>
   );
 }
