@@ -43,7 +43,7 @@ Open <http://localhost:3000>.
 ### Dashboards and reports
 - **Dashboard** — global filters (vertical, school / institution, board, grade, session, lead source, date range incl. custom start / end dates), admissions snapshot, quick insights, grade-wise vacancy, **current strength by school**, source performance, lead trend, end-to-end funnel, and a group comparison for multi-school roles.
 - **Drill-down** — move from the whole group → vertical → school → grade → funnel stage → individual records, with breadcrumbs, measure switcher and shareable URLs.
-- **Admissions Reports**, **Grade-wise Reports** (seats, vacancy and target achievement per grade), **Withdrawals** (reasons, months, grades, schools, register and strength movement).
+- **Grade-wise Reports** (seats, vacancy and target achievement per grade), **Withdrawals** (reasons, months, grades, schools, register and strength movement).
 - **Budget & Outreach**, **Social Media Reports** and **Partners Report** for marketing.
 - **Download Centre** — every report as Excel (CSV) or a printable PDF, plus locked weekly / monthly snapshots.
 
@@ -60,7 +60,6 @@ Open <http://localhost:3000>.
   - Grades & programmes per location
   - Lead sources and their reporting groups
   - Withdrawal reasons
-  - Admission cycle calendar (status follows the dates automatically)
 
   Changes apply across every page immediately. Records that already have history can only be deactivated, never hard-deleted.
 - **Administration** — users, sync jobs and the audit log.

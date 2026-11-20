@@ -16,7 +16,7 @@ const ACTIONS: Record<string, { label: string; href: string }> = {
   "Unmapped LeadSquared status": { label: "Map the status", href: "/masters" },
   "Grade close-out": { label: "View grade-wise report", href: "/grades" },
   "Unmapped > 48h": { label: "Open Mapping queue", href: "/mapping" },
-  "Seat fill below trajectory": { label: "Open admissions report", href: "/location" },
+  "Seat fill below trajectory": { label: "View seat fill by grade", href: "/grades" },
   "Source conversion drop": { label: "View source performance", href: "/" },
 };
 

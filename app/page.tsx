@@ -210,7 +210,7 @@ function GroupSection() {
       <Card
         className="mt-4"
         title="School leaderboard"
-        subtitle="Click a column to sort · RAG on seat fill vs 82% trajectory · click a school to open its admissions report"
+        subtitle="Click a column to sort · RAG on seat fill vs 82% trajectory · click a school to open it in the Drill-down"
         bodyClass="p-0"
         actions={
           <ExportButtons

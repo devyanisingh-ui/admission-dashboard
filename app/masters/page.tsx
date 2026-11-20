@@ -1,15 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { AlertTriangle, Building2, CalendarDays, Check, CheckCircle2, GitBranch, Layers, ListChecks, Megaphone, UserMinus, X } from "lucide-react";
+import { AlertTriangle, Building2, Check, CheckCircle2, GitBranch, Layers, ListChecks, Megaphone, UserMinus, X } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { Dropdown } from "@/components/dropdown";
 import { ConfirmDialog, Field, inputCls, MasterEditor, MasterToolbar, NewBadge, RowActions } from "@/components/master-kit";
 import { Badge, Button, Card, Guard, Note, PageHeader, Tabs, fmt } from "@/components/ui";
 import { useApp } from "@/lib/context";
-import { cyclePhase, DATA_TODAY, FUNNEL_STAGES, isOpenPhase, statusLeadCounts, type FunnelStage } from "@/lib/data";
+import { DATA_TODAY, FUNNEL_STAGES, statusLeadCounts, type FunnelStage } from "@/lib/data";
 import { describeChanges, nowLabel, seedMasters, type StatusRec } from "@/lib/masters";
-import { CalendarTab } from "./tab-calendar";
 import { AuditTab, ReasonsTab, SourcesTab } from "./tab-lists";
 import { LocationsTab, UnitsTab } from "./tab-locations";
 import { EditBadge, EmptyRow, FilterChip, sameText, tdc, thL, thR, useListFilter, type Commit, type TabProps } from "./shared";
@@ -22,7 +21,7 @@ export default function MastersPage() {
   );
 }
 
-type Tab = "status" | "locations" | "units" | "sources" | "reasons" | "calendar" | "log";
+type Tab = "status" | "locations" | "units" | "sources" | "reasons" | "log";
 
 function Masters() {
   // Master data lives in the app context, so every page reads the same lists.
@@ -60,7 +59,6 @@ function Masters() {
   const open = unmapped + pending;
   const activeLocs = store.locations.filter((l) => l.active);
   const activeUnits = store.units.filter((u) => u.active && activeLocs.some((l) => l.id === u.locId));
-  const openCycles = store.cycles.filter((c) => isOpenPhase(cyclePhase(c))).length;
   const inactive = (n: number) => (n ? ` · ${n} inactive` : "");
 
   const tabProps: TabProps = { store, commit };
@@ -70,7 +68,7 @@ function Masters() {
       <PageHeader title="Masters & configuration" subtitle="Maintained by the Central Admin / Support team · approvals by the Vertical Admissions Head · every change is audit-logged" />
 
       {/* Health of each master — click to open its tab */}
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-5">
         <HealthCard
           active={tab === "status"} onClick={() => setTab("status")} icon={ListChecks} tone={unmapped ? "rose" : pending ? "orange" : "green"}
           label="Status mapping" value={`${statuses.length - open} / ${statuses.length}`}
@@ -92,10 +90,6 @@ function Masters() {
           active={tab === "reasons"} onClick={() => setTab("reasons")} icon={UserMinus} tone="rose-soft"
           label="Withdrawal reasons" value={store.reasons.filter((s) => s.active).length} sub={`Active${inactive(store.reasons.filter((s) => !s.active).length)}`}
         />
-        <HealthCard
-          active={tab === "calendar"} onClick={() => setTab("calendar")} icon={CalendarDays} tone="violet"
-          label="Cycle calendar" value={openCycles} sub={`Open now · ${store.cycles.length} defined`}
-        />
       </div>
 
       <Tabs
@@ -107,7 +101,6 @@ function Masters() {
           { id: "units", label: "Grades & programmes" },
           { id: "sources", label: "Lead sources" },
           { id: "reasons", label: "Withdrawal reasons" },
-          { id: "calendar", label: "Cycle calendar" },
           { id: "log", label: <>Change log {store.audit.length > 0 && <span className="ml-1 text-xs text-slate-400">{store.audit.length}</span>}</> },
         ]}
       />
@@ -116,7 +109,6 @@ function Masters() {
       {tab === "units" && <UnitsTab {...tabProps} />}
       {tab === "sources" && <SourcesTab {...tabProps} />}
       {tab === "reasons" && <ReasonsTab {...tabProps} />}
-      {tab === "calendar" && <CalendarTab {...tabProps} />}
       {tab === "log" && <AuditTab store={store} onReset={reset} canReset={can("locationMaster.edit")} />}
 
       <p className="mt-4 text-[11px] text-slate-400">
