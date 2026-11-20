@@ -78,9 +78,9 @@ function Dashboard() {
 
           <GradeVacancy d={d} onGrade={openGrade} />
 
-          <SchoolStrength />
-
           <WeeklySnapshots />
+
+          <SchoolStrength />
 
           <div className="grid grid-cols-[minmax(0,1fr)] items-stretch gap-4 2xl:grid-cols-2">
             <SourcePerformance d={d} />
