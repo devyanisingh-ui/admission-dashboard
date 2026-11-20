@@ -974,6 +974,24 @@ export const SNAPSHOTS = [
   { id: "s5", label: "Week 43 · Mon 19 Oct 2026", frozen: "19 Oct 2026, 09:00 IST", kind: "Weekly" },
   { id: "m2", label: "September 2026", frozen: "05 Oct 2026, 09:00 IST", kind: "Monthly" },
 ];
+export type Snapshot = (typeof SNAPSHOTS)[number];
+/** When the next weekly snapshot is frozen. */
+export const NEXT_SNAPSHOT = "Monday 23 Nov 2026, 9:00 am IST";
+
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** Weeks between a snapshot's freeze date and the latest snapshot. */
+function weeksBack(snap: Snapshot) {
+  const at = (s: Snapshot) => {
+    const [d, m, y] = s.frozen.split(",")[0].split(" ");
+    return Date.UTC(Number(y), MON.indexOf(m), Number(d));
+  };
+  return (at(SNAPSHOTS[0]) - at(snap)) / (7 * 86_400_000);
+}
+
+/** Mock frozen values: each older snapshot holds a slightly smaller cumulative position (by freeze date). */
+export function snapshotFactor(snap: Snapshot) {
+  return 1 - weeksBack(snap) * 0.025 - rng(snap.id)() * 0.01;
+}
 
 export const REPORTS = [
   { name: "Admissions MIS", desc: "Leads → enrolled by location and grade/programme", status: "ok" },

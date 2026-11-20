@@ -11,6 +11,7 @@ import {
 import { ExportButtons } from "@/components/export-buttons";
 import { SegmentComparison } from "@/components/segment-comparison";
 import { SchoolStrength } from "@/components/strength-widget";
+import { WeeklySnapshots } from "@/components/weekly-snapshots";
 import { Badge, Card, Guard, Note, Rag, fmt, fmtINR, fmtPct } from "@/components/ui";
 import { rangeLabelOf, useApp } from "@/lib/context";
 import { dashboardData } from "@/lib/dashboard";
@@ -78,6 +79,8 @@ function Dashboard() {
           <GradeVacancy d={d} onGrade={openGrade} />
 
           <SchoolStrength />
+
+          <WeeklySnapshots />
 
           <div className="grid grid-cols-[minmax(0,1fr)] items-stretch gap-4 2xl:grid-cols-2">
             <SourcePerformance d={d} />

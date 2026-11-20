@@ -5,12 +5,12 @@ import {
   AlertTriangle, BarChart3, CheckCircle2, X, CalendarClock, ChevronLeft, ChevronRight, ClipboardList, Clock, FileSpreadsheet, FileText, Filter, GitMerge, GraduationCap,
   Handshake, Lock, Search, Share2, ShieldCheck, UserCheck, UserMinus, Users, Wallet,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Drawer } from "@/components/drawer";
 import { Badge, Button, Card, Guard, Note, PageHeader, Rag, SourceTag, Tabs, fmt, fmtPct } from "@/components/ui";
 import { useApp } from "@/lib/context";
 import { downloadCsv, printReport } from "@/lib/export";
-import { kpis, locationTotals, rng, SNAPSHOTS, totalsFor, type Cycle } from "@/lib/data";
+import { kpis, locationTotals, NEXT_SNAPSHOT, snapshotFactor, SNAPSHOTS, totalsFor, type Cycle, type Snapshot } from "@/lib/data";
 import { REPORT_DEFS, type ReportDef } from "@/lib/reports";
 
 export default function ReportsPage() {
@@ -23,6 +23,14 @@ export default function ReportsPage() {
 
 function Reports() {
   const [tab, setTab] = useState<"downloads" | "snapshots">("downloads");
+  const [initialSnap, setInitialSnap] = useState<Snapshot | null>(null);
+  // Deep links from the dashboard: /reports?tab=snapshots&snap=s1
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("tab") === "snapshots") setTab("snapshots");
+    const snap = SNAPSHOTS.find((x) => x.id === q.get("snap"));
+    if (snap) { setTab("snapshots"); setInitialSnap(snap); }
+  }, []);
   return (
     <>
       <PageHeader
@@ -37,16 +45,16 @@ function Reports() {
           { id: "snapshots", label: <>Weekly &amp; monthly snapshots <span className="ml-1 text-xs text-slate-400">{SNAPSHOTS.length}</span></> },
         ]}
       />
-      {tab === "snapshots" ? <Snapshots /> : <Downloads />}
+      {tab === "snapshots" ? <Snapshots key={initialSnap?.id ?? "none"} initial={initialSnap} /> : <Downloads />}
     </>
   );
 }
 
 type KindFilter = "all" | "Weekly" | "Monthly";
 
-function Snapshots() {
+function Snapshots({ initial }: { initial: Snapshot | null }) {
   const { can, filteredLocations, cycle, seatVersion } = useApp();
-  const [open, setOpen] = useState<Snapshot | null>(null);
+  const [open, setOpen] = useState<Snapshot | null>(initial);
   const [kind, setKind] = useState<KindFilter>("all");
   const ids = filteredLocations.map((l) => l.id);
   const live = useMemo(() => kpis(totalsFor(ids, cycle)), [ids.join(), cycle, seatVersion]);
@@ -60,7 +68,7 @@ function Snapshots() {
     <>
       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm text-brand-800">
         <CalendarClock size={16} />
-        <span>Next automatic snapshot <b>Monday 23 Nov 2026, 9:00 am IST</b></span>
+        <span>Next automatic snapshot <b>{NEXT_SNAPSHOT}</b></span>
         <span className="text-xs text-brand-700/80">Snapshots are locked — back-dated edits in source systems only appear in later snapshots.</span>
       </div>
 
@@ -146,19 +154,12 @@ function Snapshots() {
   );
 }
 
-type Snapshot = (typeof SNAPSHOTS)[number];
-
 function snapshotRows(s: Snapshot, locs: { id: string; name: string }[], cycle: Cycle) {
   const f = snapshotFactor(s);
   return locs.map((l) => {
     const k = kpis(locationTotals(l.id, cycle));
     return { Snapshot: s.label, Location: l.name, Leads: Math.round(k.leads * f), Applications: Math.round(k.applications * f), "FABS Enrolled": Math.round(k.enrolled * f), "Seat Fill %": Number((k.seatFill * f).toFixed(1)) };
   });
-}
-
-/** Mock frozen values: each older snapshot holds a slightly smaller cumulative position. */
-function snapshotFactor(snap: Snapshot) {
-  return 1 - SNAPSHOTS.indexOf(snap) * 0.025 - rng(snap.id)() * 0.01;
 }
 
 const SNAP_METRICS: { key: keyof ReturnType<typeof kpis>; label: string; source: string; pct?: boolean; lowerIsBetter?: boolean }[] = [
