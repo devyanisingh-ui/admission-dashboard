@@ -77,7 +77,7 @@ export function rangeLabelOf(range: DateRange, custom: DateSpan, cycle: Cycle, s
   return start === end ? fmtDate(start, !short) : `${fmtDate(start, !short)} – ${fmtDate(end, !short)}`;
 }
 
-import { ROLES, can, type Permission, type RoleId } from "./roles";
+import { PERMISSIONS_KEY, ROLES, can, defaultPermissionStore, revivePermissions, type Permission, type PermissionStore, type RoleId } from "./roles";
 
 /** Demo users: which location / vertical each role is scoped to. */
 const ROLE_HOME: Record<RoleId, { locationId?: string; vertical?: Vertical; user: string }> = {
@@ -133,6 +133,9 @@ interface AppState {
   seatVersion: number;
   lockedVertical: boolean;
   lockedLocation: boolean;
+  /** Role → permission matrix, editable by the System Administrator (kept in this browser). */
+  permissions: PermissionStore;
+  setPermissions: (f: (s: PermissionStore) => PermissionStore) => void;
   can: (p: Permission) => boolean;
 }
 
@@ -226,6 +229,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
+  // Role permissions: every `can()` check reads the saved matrix.
+  const [perms, setPerms] = useState<PermissionStore>(defaultPermissionStore);
+  const setPermissions = (f: (s: PermissionStore) => PermissionStore) =>
+    setPerms((cur) => {
+      const store = f(cur);
+      if (store === cur) return cur;
+      try {
+        localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(store));
+      } catch {}
+      return store;
+    });
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PERMISSIONS_KEY);
+      const store = raw ? revivePermissions(JSON.parse(raw)) : null;
+      if (store) setPerms(store);
+    } catch {}
+  }, []);
+
   // Picking a school globally also drives single-location pages, and vice versa.
   const setSchool = (id: string) => {
     setSchoolState(id);
@@ -291,10 +313,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       masters: master.store, setMasters,
       lockedVertical: scope === "location" || scope === "vertical",
       lockedLocation: scope === "location",
-      can: (p) => can(role, p),
+      permissions: perms, setPermissions,
+      can: (p) => can(role, p, perms.matrix),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role, vertical, board, cycle, locationId, school, grade, sourceGroup, dateRange, customRange, seat, master, mkt]);
+  }, [role, vertical, board, cycle, locationId, school, grade, sourceGroup, dateRange, customRange, seat, master, mkt, perms]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -9,7 +9,9 @@ import { Dropdown } from "@/components/dropdown";
 import { Badge, Button, Guard, Note, PageHeader, fmt } from "@/components/ui";
 import { useApp } from "@/lib/context";
 import { AUDIT_LOG, LOCATIONS, SYNC_RUNS, SYNC_STATUS, USERS } from "@/lib/data";
-import { ROLES, roleLabel, type RoleId } from "@/lib/roles";
+import { ROLES, type RoleId } from "@/lib/roles";
+import { PermissionMatrixPanel, grantCount } from "./permissions";
+import { Panel, RoleBadge } from "./shared";
 
 export default function AdminPage() {
   return (
@@ -20,20 +22,6 @@ export default function AdminPage() {
 }
 
 type Tab = "users" | "sync" | "audit";
-
-const ROLE_TONE: Record<RoleId, string> = {
-  counsellor: "bg-sky-50 text-sky-700 ring-sky-200",
-  locHead: "bg-brand-50 text-brand-700 ring-brand-200",
-  principal: "bg-violet-50 text-violet-700 ring-violet-200",
-  verticalHead: "bg-indigo-50 text-indigo-700 ring-indigo-200",
-  leadership: "bg-amber-50 text-amber-800 ring-amber-200",
-  centralAdmin: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  sysAdmin: "bg-slate-100 text-slate-700 ring-slate-300",
-};
-
-function RoleBadge({ role }: { role: string }) {
-  return <span className={clsx("inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset", ROLE_TONE[role as RoleId] ?? ROLE_TONE.sysAdmin)}>{roleLabel(role)}</span>;
-}
 
 function Admin() {
   const { can, role } = useApp();
@@ -86,6 +74,7 @@ function Admin() {
         ))}
       </div>
 
+      {!tab && <Note>Your role can open Administration but has none of its sections (users &amp; roles, sync, audit log). Ask the System Administrator to adjust the permission matrix.</Note>}
       {tab === "users" && <UsersTab />}
       {tab === "sync" && <SyncTab />}
       {tab === "audit" && <AuditTab role={role} />}
@@ -124,21 +113,6 @@ function AdminCard({
   );
 }
 
-function Panel({ title, sub, actions, children, className, bodyClass }: { title: string; sub?: string; actions?: ReactNode; children: ReactNode; className?: string; bodyClass?: string }) {
-  return (
-    <section className={clsx("rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]", className)}>
-      <header className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
-        <div>
-          <h2 className="text-[15px] font-semibold text-brand-900">{title}</h2>
-          {sub && <p className="mt-0.5 text-xs text-slate-500">{sub}</p>}
-        </div>
-        {actions}
-      </header>
-      <div className={bodyClass ?? "p-4"}>{children}</div>
-    </section>
-  );
-}
-
 const th = "px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-slate-500";
 
 /* ------------------------------------------------------------------ */
@@ -146,7 +120,8 @@ const th = "px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide 
 /* ------------------------------------------------------------------ */
 
 function UsersTab() {
-  const { can } = useApp();
+  const { can, permissions } = useApp();
+  const [focusRole, setFocusRole] = useState<RoleId | null>(null);
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleId | "all">("all");
   const s = q.trim().toLowerCase();
@@ -156,6 +131,7 @@ function UsersTab() {
   return (
     <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <Panel
+        className="min-w-0"
         title="Users and role assignment"
         sub="The System Administrator assigns roles on Central Admin request · access is scoped by Vertical → Location"
         bodyClass="p-0"
@@ -220,25 +196,37 @@ function UsersTab() {
         </div>
       </Panel>
 
-      <Panel title="Roles" sub="Permission matrix §10.2 · Higher Ed equivalent in grey">
-        <ul className="space-y-2.5">
+      <Panel title="Roles" sub="Scope, users and permissions per role · click a role to highlight it in the matrix · Higher Ed equivalent in grey" bodyClass="p-2">
+        <ul className="space-y-0.5">
           {ROLES.map((r) => {
             const n = USERS.filter((u) => u.role === r.id).length;
+            const p = grantCount(permissions.matrix, r.id);
             return (
-              <li key={r.id} className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <RoleBadge role={r.id} />
-                  <div className="mt-0.5 text-[11px] text-slate-400">
-                    {r.scope === "location" ? "Own location" : r.scope === "vertical" ? "One vertical" : r.scope === "all" ? "All locations" : "System"}
-                    {r.higherEd !== "—" && r.higherEd !== r.label && <> · Higher Ed: {r.higherEd}</>}
+              <li key={r.id}>
+                <button
+                  onClick={() => setFocusRole(focusRole === r.id ? null : r.id)}
+                  aria-pressed={focusRole === r.id}
+                  className={clsx("flex w-full items-start justify-between gap-3 rounded-lg px-2 py-2 text-left", focusRole === r.id ? "bg-brand-50 ring-1 ring-brand-200" : "hover:bg-slate-50")}
+                >
+                  <div className="min-w-0">
+                    <RoleBadge role={r.id} />
+                    <div className="mt-0.5 text-[11px] text-slate-400">
+                      {r.scope === "location" ? "Own location" : r.scope === "vertical" ? "One vertical" : r.scope === "all" ? "All locations" : "System"}
+                      {r.higherEd !== "—" && r.higherEd !== r.label && <> · Higher Ed: {r.higherEd}</>}
+                    </div>
                   </div>
-                </div>
-                <span className="shrink-0 text-sm font-semibold text-slate-700 tabular">{n} user{n === 1 ? "" : "s"}</span>
+                  <div className="shrink-0 text-right">
+                    <div className="text-sm font-semibold text-slate-700 tabular">{n} user{n === 1 ? "" : "s"}</div>
+                    <div className="text-[11px] text-slate-400 tabular">{p} permission{p === 1 ? "" : "s"}</div>
+                  </div>
+                </button>
               </li>
             );
           })}
         </ul>
       </Panel>
+
+      <PermissionMatrixPanel focusRole={focusRole} onFocusRole={setFocusRole} />
     </div>
   );
 }

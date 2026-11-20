@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { Info, Lock, TrendingDown, TrendingUp } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useApp } from "@/lib/context";
-import { roleLabel, type Permission } from "@/lib/roles";
+import { permissionDef, roleLabel, type Permission } from "@/lib/roles";
 import { Dropdown, type DropdownOption } from "./dropdown";
 
 export const fmt = (n: number) => n.toLocaleString("en-IN");
@@ -218,7 +218,7 @@ export function Guard({ perm, children }: { perm: Permission; children: ReactNod
       <Lock className="mx-auto text-slate-400" />
       <h2 className="mt-3 font-semibold text-slate-800">Not available for this role</h2>
       <p className="mt-1 text-sm text-slate-500">
-        The permission matrix (§10.2) does not give <b>{roleLabel(role)}</b> access to this page. Switch role in the top bar to preview other users.
+        <b>{roleLabel(role)}</b> does not have the “{permissionDef(perm).label}” permission. The System Administrator sets this in Administration → Users &amp; roles. Switch role in the top bar to preview other users.
       </p>
     </div>
   );
