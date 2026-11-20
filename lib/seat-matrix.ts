@@ -61,7 +61,7 @@ export interface HistoryEntry {
   who: string;
   cycle: PlanCycle;
   locId: string;
-  action: "created" | "updated" | "approved";
+  action: "created" | "updated" | "approved" | "deleted";
   summary: string;
   changes: SeatChange[];
 }
@@ -131,10 +131,15 @@ export function diffRows(before: Record<string, SeatValues>, after: Record<strin
 }
 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
-function summarise(changes: SeatChange[]) {
-  const units = new Set(changes.map((c) => c.unit));
+function summarise(changes: SeatChange[], added: string[] = [], removed: string[] = []) {
+  const units = new Set(changes.filter((c) => !added.includes(c.unit)).map((c) => c.unit));
   const seatDelta = changes.filter((c) => c.field === "seats").reduce((s, c) => s + c.to - c.from, 0);
-  return `${plural(units.size, "row")} changed${seatDelta ? ` · seats ${seatDelta > 0 ? "+" : "−"}${Math.abs(seatDelta)}` : ""}`;
+  const parts = [
+    units.size ? `${plural(units.size, "row")} changed` : "",
+    added.length ? `added ${added.join(", ")}` : "",
+    removed.length ? `removed ${removed.join(", ")}` : "",
+  ].filter(Boolean);
+  return `${parts.join(" · ")}${seatDelta ? ` · seats ${seatDelta > 0 ? "+" : "−"}${Math.abs(seatDelta)}` : ""}`;
 }
 
 export function createMatrix(
@@ -153,21 +158,57 @@ export function createMatrix(
   };
 }
 
-/** Saves edited rows over the current matrix; returns the store unchanged when nothing differs. */
+/** Rows added to or removed from a matrix (a grade / programme offered or not offered this cycle). */
+export interface RowChanges {
+  added?: string[];
+  removed?: string[];
+}
+
+/**
+ * Saves edited rows over the current matrix, adding and removing rows as given;
+ * returns the store unchanged when nothing differs.
+ */
 export function updateMatrix(
-  store: SeatStore, cycle: PlanCycle, locId: string, next: Record<string, SeatValues>, who: string, action: "updated" | "approved" = "updated",
+  store: SeatStore, cycle: PlanCycle, locId: string, next: Record<string, SeatValues>, who: string,
+  action: "updated" | "approved" = "updated", { added = [], removed = [] }: RowChanges = {},
 ): SeatStore {
   const cur = matrixOf(store, cycle, locId);
-  const changes = diffRows(cur.rows, next);
-  if (!changes.length) return store;
+  const addedNew = added.filter((u) => !cur.rows[u]);
+  const removedNow = removed.filter((u) => cur.rows[u]);
+  const kept = Object.fromEntries(Object.entries(next).filter(([u]) => !removedNow.includes(u)));
+  for (const u of addedNew) kept[u] ??= blankValues();
+  const changes = diffRows(cur.rows, kept);
+  if (!changes.length && !addedNew.length && !removedNow.length) return store;
+  const rows = { ...cur.rows, ...kept };
+  for (const u of removedNow) delete rows[u];
   const at = nowLabel();
   return {
     ...store,
     matrices: {
       ...store.matrices,
-      [key(cycle, locId)]: { rows: { ...cur.rows, ...next }, meta: { ...(cur.meta ?? { method: "blank", createdBy: who, createdAt: at }), updatedBy: who, updatedAt: at } },
+      [key(cycle, locId)]: { rows, meta: { ...(cur.meta ?? { method: "blank", createdBy: who, createdAt: at }), updatedBy: who, updatedAt: at } },
     },
-    history: [{ id: uid(), at, who, cycle, locId, action, summary: summarise(changes), changes }, ...store.history],
+    history: [{ id: uid(), at, who, cycle, locId, action, summary: summarise(changes, addedNew, removedNow), changes }, ...store.history],
+  };
+}
+
+/**
+ * Deletes a saved matrix and drops its pending change requests. The change history is kept for the audit trail.
+ * For the live cycle this reverts to the initial load, so the UI only offers it for cycles still in setup.
+ */
+export function deleteMatrix(store: SeatStore, cycle: PlanCycle, locId: string, who: string): SeatStore {
+  const k = key(cycle, locId);
+  const saved = store.matrices[k];
+  if (!saved) return store;
+  const { [k]: _gone, ...matrices } = store.matrices; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const seats = Object.values(saved.rows).reduce((s, r) => s + r.seats, 0);
+  return {
+    matrices,
+    requests: store.requests.filter((r) => !(r.status === "pending" && r.cycle === cycle && r.locId === locId)),
+    history: [
+      { id: uid(), at: nowLabel(), who, cycle, locId, action: "deleted", summary: `Seat Matrix deleted · had ${plural(Object.keys(saved.rows).length, "row")}, ${seats} seats`, changes: [] },
+      ...store.history,
+    ],
   };
 }
 

@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import {
   AlertTriangle, Armchair, Check, CheckCircle2, Circle, Clock, Copy, DoorOpen, Download, FilePlus2, FileSpreadsheet, GraduationCap, History, Lock,
-  Percent, School, Send, ShieldCheck, Target, TrendingDown, TrendingUp, Unlock, Upload, X,
+  Percent, Plus, RotateCcw, School, Send, ShieldCheck, Target, Trash2, TrendingDown, TrendingUp, Unlock, Upload, X,
 } from "lucide-react";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { SnapshotCard } from "@/components/dashboard-widgets";
@@ -13,9 +13,10 @@ import { useApp } from "@/lib/context";
 import { downloadCsv } from "@/lib/export";
 import { defaultTarget, locationUnits, pct, type Location, type SeatField, type SeatValues, type UnitStats } from "@/lib/data";
 import { EntryToast, useEntryStore } from "@/components/entry-kit";
+import { ConfirmDialog } from "@/components/master-kit";
 import { targetKey } from "@/lib/marketing";
 import {
-  FIELD_LABEL, LIVE_PLAN_CYCLE, planCyclesFor, blankValues, createMatrix, diffRows, matrixOf, parseSeatCsv, templateRows, updateMatrix, withIntake,
+  FIELD_LABEL, LIVE_PLAN_CYCLE, planCyclesFor, blankValues, createMatrix, deleteMatrix, diffRows, matrixOf, parseSeatCsv, templateRows, updateMatrix, withIntake,
   type ChangeRequest, type CreateMethod, type HistoryEntry, type ParsedUpload, type PlanCycle,
 } from "@/lib/seat-matrix";
 
@@ -126,6 +127,10 @@ function SeatMatrix() {
   // Admissions so far come from FABS for the live cycle only; seat edits do not change them.
   const live = useMemo(() => locationUnits(loc.id, "2026-27"), [loc.id, seatVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   const [edits, setEdits] = useState<Record<string, Partial<SeatValues>>>({});
+  // Rows added to / removed from the matrix but not saved yet (setup cycles only).
+  const [added, setAdded] = useState<string[]>([]);
+  const [removed, setRemoved] = useState<string[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [flash, setFlash] = useState<Flash>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -133,26 +138,32 @@ function SeatMatrix() {
   const canDirectEdit = !started && can("seat.edit");
   const canRequest = started && can("seat.requestChange");
   const editable = view.exists && (canDirectEdit || canRequest);
+  const canEditRows = view.exists && canDirectEdit;
   const unitLabel = loc.vertical === "Schools" ? "Grade" : "Programme";
-  const units = loc.units;
+  // Rows in the matrix (kept in Masters order), plus unsaved additions. Removed rows stay listed, struck through, until saved.
+  const listed = view.exists ? loc.units.filter((u) => view.rows[u] || added.includes(u)) : loc.units;
+  const units = listed.filter((u) => !removed.includes(u));
+  const addable = view.exists ? loc.units.filter((u) => !view.rows[u] && !added.includes(u)) : [];
 
   const say = (f: Flash, ms = 4500) => {
     setFlash(f);
     if (f) setTimeout(() => setFlash((cur) => (cur === f ? null : cur)), ms);
   };
-  const discard = () => { setEdits({}); setResetKey((k) => k + 1); };
+  const discard = () => { setEdits({}); setAdded([]); setRemoved([]); setResetKey((k) => k + 1); };
   const switchCycle = (c: PlanCycle) => { setPlanCycle(c); discard(); setFlash(null); };
 
   const orig = (u: string) => view.rows[u] ?? blankValues();
   const val = (u: string, f: SeatField) => edits[u]?.[f] ?? orig(u)[f];
   const pendingFor = (u: string) => requests.filter((r) => r.status === "pending" && r.locId === loc.id && r.cycle === planCycle && r.unit === u);
 
-  const rows = units.map((u) => {
+  const allRows = listed.map((u) => {
     const s = live.find((x) => x.unit === u);
     const net = started && s ? s.enrolled - s.withdrawnNew : 0;
     const continuing = val(u, "continuing"), seats = val(u, "seats"), ews = val(u, "ewsSeats");
-    return { unit: u, net, ewsFilled: started && s ? Math.min(s.ewsFilled, ews) : 0, continuing, seats, ews, intake: continuing + seats, ewsOver: ews > seats, belowFilled: started && seats < net };
+    const gone = removed.includes(u);
+    return { unit: u, net, ewsFilled: started && s ? Math.min(s.ewsFilled, ews) : 0, continuing, seats, ews, intake: continuing + seats, ewsOver: !gone && ews > seats, belowFilled: started && seats < net, gone, isNew: added.includes(u) };
   });
+  const rows = allRows.filter((r) => !r.gone);
   const tot = rows.reduce(
     (a, r) => ({ intake: a.intake + r.intake, continuing: a.continuing + r.continuing, seats: a.seats + r.seats, ews: a.ews + r.ews, net: a.net + r.net, ewsFilled: a.ewsFilled + r.ewsFilled }),
     { intake: 0, continuing: 0, seats: 0, ews: 0, net: 0, ewsFilled: 0 },
@@ -163,9 +174,27 @@ function SeatMatrix() {
   const empty = rows.filter((r) => !r.seats);
   const fill = pct(tot.net, tot.seats);
 
-  const nextRows = () => Object.fromEntries(Object.keys(edits).map((u) => [u, withIntake({ ...orig(u), ...edits[u] })]));
+  const nextRows = () => Object.fromEntries([...new Set([...Object.keys(edits), ...added])].map((u) => [u, withIntake({ ...orig(u), ...edits[u] })]));
   const changes = view.exists ? diffRows(view.rows, nextRows()).filter((c) => c.field !== "intake") : [];
-  const changeCount = changes.length;
+  // Field edits on a newly added row count as part of adding it.
+  const changeCount = changes.filter((c) => !added.includes(c.unit)).length + added.length + removed.length;
+
+  const addRow = (u: string) => {
+    if (!u) return;
+    setAdded((a) => (a.includes(u) ? a : [...a, u]));
+  };
+  const removeRow = (u: string) => {
+    setEdits((e) => { const { [u]: _drop, ...rest } = e; return rest; }); // eslint-disable-line @typescript-eslint/no-unused-vars
+    if (added.includes(u)) setAdded((a) => a.filter((x) => x !== u));
+    else setRemoved((r) => [...r, u]);
+    setResetKey((k) => k + 1);
+  };
+  const restoreRow = (u: string) => setRemoved((r) => r.filter((x) => x !== u));
+  const removeMatrix = () => {
+    setSeatStore((s) => deleteMatrix(s, planCycle, loc.id, userName));
+    discard();
+    say({ tone: "info", text: <>Seat Matrix for <b>{loc.short}</b> {cycleText(planCycle)} deleted — audit-logged. Create it again below whenever you are ready.</> }, 6000);
+  };
 
   // Typing the original value back removes the change.
   const set = (unit: string, f: SeatField, v: number) =>
@@ -186,7 +215,7 @@ function SeatMatrix() {
       setSeatStore((s) => ({ ...s, requests: [...newReqs, ...s.requests] }));
       say({ tone: "info", text: `${plural(newReqs.length, "change request")} sent to the Vertical Admissions Head. Seats update once approved.` });
     } else {
-      setSeatStore((s) => updateMatrix(s, planCycle, loc.id, nextRows(), userName));
+      setSeatStore((s) => updateMatrix(s, planCycle, loc.id, nextRows(), userName, "updated", { added, removed }));
       say({ tone: "info", text: <>Seat Matrix saved — {plural(changeCount, "change")} audit-logged. {planCycle === LIVE_PLAN_CYCLE && "Seat fill and vacancies across the dashboard now use the new seats."}</> });
     }
     discard();
@@ -267,10 +296,15 @@ function SeatMatrix() {
                   <input ref={fileRef} type="file" accept=".csv,text/csv,.txt" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) loadFile(f); e.target.value = ""; }} />
                   <span className="mx-1 hidden h-5 w-px bg-slate-200 sm:block" />
                   {changeCount > 0 && <Button size="sm" variant="ghost" onClick={discard}>Discard</Button>}
-                  <Button size="sm" variant="primary" disabled={!changeCount || invalid.length > 0} onClick={submit} title={invalid.length ? "EWS/DG reserved cannot be more than seats for new admission" : !changeCount ? "Edit a figure first" : undefined}>
+                  <Button size="sm" variant="primary" disabled={!changeCount || invalid.length > 0 || !units.length} onClick={submit} title={invalid.length ? "EWS/DG reserved cannot be more than seats for new admission" : !units.length ? `Keep at least one ${unitLabel.toLowerCase()} — or delete the matrix` : !changeCount ? "Edit a figure first" : undefined}>
                     {canRequest ? <Send size={13} /> : <Check size={13} />}
                     {changeCount ? `${canRequest ? "Request" : "Save"} ${plural(changeCount, "change")}` : canRequest ? "Request changes" : "Save changes"}
                   </Button>
+                  {canEditRows && (
+                    <Button size="sm" variant="danger" onClick={() => setConfirmDelete(true)} title={`Delete the ${cycleText(planCycle)} Seat Matrix for ${loc.short}`}>
+                      <Trash2 size={13} /> Delete matrix
+                    </Button>
+                  )}
                 </>
               )}
             </>
@@ -280,6 +314,13 @@ function SeatMatrix() {
         <LocationPicker />
         <Select label="Planning cycle" value={planCycle} onChange={switchCycle} options={cycles.map((c) => ({ value: c.value, label: c.label }))} />
       </Toolbar>
+
+      {confirmDelete && (
+        <ConfirmDialog title={`Delete the ${cycleText(planCycle)} Seat Matrix?`} confirmLabel="Delete matrix" onConfirm={removeMatrix} onClose={() => setConfirmDelete(false)}>
+          This removes all {plural(Object.keys(view.rows).length, unitLabel.toLowerCase())} and {fmt(Object.values(view.rows).reduce((s, r) => s + r.seats, 0))} seats for <b>{loc.name}</b>
+          {changeCount > 0 && <>, and discards {plural(changeCount, "unsaved change")}</>}. The change history is kept. You can create the matrix again afterwards.
+        </ConfirmDialog>
+      )}
 
       <div
         className={clsx(
@@ -368,6 +409,7 @@ function SeatMatrix() {
                           <col className="w-[24%]" />
                         </>
                       )}
+                      {canEditRows && <col className="w-24" />}
                     </colgroup>
                     <thead>
                       <tr>
@@ -376,6 +418,7 @@ function SeatMatrix() {
                           Seat Matrix{editable && <span className="ml-1.5 font-medium normal-case tracking-normal text-brand-600/80">· editable</span>}
                         </th>
                         {started && <th colSpan={3} className={clsx(groupHead, "border-l border-slate-200 bg-slate-50 text-left text-slate-500")}>Admissions so far (FABS)</th>}
+                        {canEditRows && <th rowSpan={2} className={clsx(thBase, "border-b border-l border-slate-200 bg-slate-50 text-center align-bottom")}><span className="sr-only">Row actions</span></th>}
                       </tr>
                       <tr className="border-b border-slate-200">
                         <th className={clsx(th, "border-l border-slate-200 bg-brand-50/30")}>Continuing</th>
@@ -392,10 +435,23 @@ function SeatMatrix() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {rows.map((r) => {
+                      {allRows.map((r) => {
                         const pend = pendingFor(r.unit);
-                        const edited = !!edits[r.unit];
                         const vac = r.seats - r.net;
+                        if (r.gone)
+                          return (
+                            <tr key={r.unit} className="bg-rose-50/50 text-slate-400">
+                              <td className="whitespace-nowrap border-l-2 border-l-rose-400 px-3 py-2 font-medium">
+                                <span className="line-through decoration-rose-300">{r.unit.replace(/ – Y1$/, "")}</span>
+                                <span className="ml-2 text-[11px] font-normal text-rose-600">removed — not saved yet</span>
+                              </td>
+                              <td colSpan={4} className={clsx(td, "border-l border-slate-100 py-2 line-through decoration-slate-300")}>{fmt(r.seats)} seats</td>
+                              <td className="border-l border-slate-100 px-2 py-1 text-center">
+                                <Button size="sm" variant="ghost" onClick={() => restoreRow(r.unit)} title={`Keep ${r.unit}`}><RotateCcw size={12} /> Undo</Button>
+                              </td>
+                            </tr>
+                          );
+                        const edited = !!edits[r.unit] || r.isNew;
                         return (
                           <tr
                             key={r.unit}
@@ -407,6 +463,7 @@ function SeatMatrix() {
                             <td className={clsx("whitespace-nowrap border-l-2 px-3 font-medium text-slate-800", editable ? "py-1" : "py-2", r.ewsOver ? "border-l-rose-400" : edited ? "border-l-amber-400" : "border-l-transparent")}>
                               <span className="inline-flex items-center gap-1.5">
                                 {r.unit.replace(/ – Y1$/, "")}
+                                {r.isNew && <Badge tone="blue" className="!px-1.5 !py-0 text-[10px]">New</Badge>}
                                 {r.ewsOver && <span className="text-rose-600" title={`EWS/DG reserved (${r.ews}) is more than seats (${r.seats})`}><AlertTriangle size={13} /></span>}
                                 {pend.length > 0 && <Badge tone="amber" className="!px-1.5 !py-0 text-[10px]"><Clock size={10} /> {pend.length} pending</Badge>}
                                 {!r.seats && !edited && <span className="text-[11px] font-normal text-slate-400">not filled in</span>}
@@ -423,9 +480,30 @@ function SeatMatrix() {
                                 <td className="px-3 py-1.5"><FillCell net={r.net} seats={r.seats} /></td>
                               </>
                             )}
+                            {canEditRows && (
+                              <td className="border-l border-slate-100 px-2 py-1 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => removeRow(r.unit)}
+                                  disabled={units.length <= 1}
+                                  aria-label={`Remove ${r.unit}`}
+                                  title={units.length <= 1 ? `Keep at least one ${unitLabel.toLowerCase()} — or delete the matrix` : `Remove ${r.unit} from this cycle's matrix`}
+                                  className="rounded-md p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
+                      {canEditRows && addable.length > 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-3 py-2">
+                            <AddRow options={addable} unitLabel={unitLabel} onAdd={addRow} />
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold text-slate-900">
@@ -441,6 +519,7 @@ function SeatMatrix() {
                             <td className="px-3 py-2.5"><FillCell net={tot.net} seats={tot.seats} /></td>
                           </>
                         )}
+                        {canEditRows && <td className="border-l border-slate-200" />}
                       </tr>
                     </tfoot>
                   </table>
@@ -457,7 +536,7 @@ function SeatMatrix() {
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
                     {editable && <span className="inline-flex items-center gap-1.5"><span className="h-3 w-1 rounded-sm bg-amber-400" /> Edited, not saved</span>}
-                    {editable && <span className="inline-flex items-center gap-1.5"><span className="h-3 w-1 rounded-sm bg-rose-400" /> Needs fixing</span>}
+                    {editable && <span className="inline-flex items-center gap-1.5"><span className="h-3 w-1 rounded-sm bg-rose-400" /> {canEditRows ? "Removed / needs fixing" : "Needs fixing"}</span>}
                     {started && <span className="inline-flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-violet-500" /> Over-filled</span>}
                   </div>
                 </div>
@@ -515,6 +594,27 @@ function SeatMatrix() {
         </>
       )}
     </>
+  );
+}
+
+/** Adds a grade / programme offered at this location (from Masters) that is not in the matrix yet. */
+function AddRow({ options, unitLabel, onAdd }: { options: string[]; unitLabel: string; onAdd: (u: string) => void }) {
+  const [pick, setPick] = useState(options[0]);
+  const value = options.includes(pick) ? pick : options[0];
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <label className="text-slate-500" htmlFor="seat-add-row">Add {unitLabel.toLowerCase()}</label>
+      <select
+        id="seat-add-row"
+        value={value}
+        onChange={(e) => setPick(e.target.value)}
+        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+      >
+        {options.map((u) => <option key={u} value={u}>{u.replace(/ – Y1$/, "")}</option>)}
+      </select>
+      <Button size="sm" onClick={() => onAdd(value)}><Plus size={13} /> Add row</Button>
+      <span className="text-slate-400">Only {unitLabel.toLowerCase()}s set up for this location in Masters can be added.</span>
+    </div>
   );
 }
 
@@ -763,7 +863,7 @@ function HistoryCard({ history }: { history: HistoryEntry[] }) {
             <li key={h.id} className="px-4 py-2.5 text-sm">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium text-slate-800">{h.summary}</span>
-                <Badge tone={h.action === "created" ? "blue" : h.action === "approved" ? "green" : "slate"}>{h.action}</Badge>
+                <Badge tone={h.action === "created" ? "blue" : h.action === "approved" ? "green" : h.action === "deleted" ? "red" : "slate"}>{h.action}</Badge>
               </div>
               {h.changes.length > 0 && (
                 <ul className="mt-1 space-y-0.5 text-xs text-slate-600">
