@@ -503,7 +503,7 @@ const PANEL_REPORTS: PanelReport[] = [
   { id: "mis", title: "Admissions MIS", desc: "Leads, applications, admissions, withdrawals", icon: BarChart3, color: "bg-brand-700", href: "/drilldown", filters: ["session", "grade", "source"] },
   { id: "vacancy", title: "Grade-wise Vacancy", desc: "Approved intake, enrolled, remaining seats", icon: Users, color: "bg-emerald-500", href: "/grades", filters: ["session", "grade"] },
   { id: "targets", title: "Grade-wise Admissions", desc: "Target vs actual admissions", icon: GraduationCap, color: "bg-violet-500", href: "/grades", filters: ["session", "grade"] },
-  { id: "budget", title: "Budget & Outreach", desc: "Allocation, actual spend, activities, outcomes", icon: Wallet, color: "bg-orange-500", href: "/budget", filters: ["session", "activity"] },
+  { id: "budget", title: "Budget & Outreach", desc: "Allocation, actual spend, activities, leads", icon: Wallet, color: "bg-orange-500", href: "/budget", filters: ["session", "activity"] },
   { id: "social", title: "Social Media", desc: "Reach, impressions, interactions, prospects", icon: Share2, color: "bg-teal-600", href: "/social", filters: ["platform", "month"] },
   { id: "withdrawals", title: "Withdrawals", desc: "Withdrawals by location and reason", icon: UserMinus, color: "bg-rose-500", href: "/strength", filters: ["session"] },
   { id: "partners", title: "Partners", desc: "Connected partners and lead sharing", icon: Handshake, color: "bg-violet-600", href: "/partners", filters: ["partnerType", "month"] },

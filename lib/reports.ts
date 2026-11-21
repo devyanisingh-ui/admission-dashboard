@@ -125,13 +125,13 @@ export const REPORT_DEFS: ReportDef[] = [
     ],
   },
   {
-    id: "budget", name: "Budget & Outreach", group: "Marketing & outreach", sources: ["Dashboard", "LeadSquared", "FABS"], status: "ok",
-    desc: "Allocation, actual spend and activities (entered) with outcomes (leads, admissions, cost per lead / admission)",
+    id: "budget", name: "Budget & Outreach", group: "Marketing & outreach", sources: ["Dashboard"], status: "ok",
+    desc: "Allocation, actual spend, activities and leads (all entered) with cost per lead",
     build: (ids, cycle) =>
       ids.flatMap((id) =>
         outreachByActivity([id], cycle).map((a) => ({
           Location: locationById(id).name, Activity: a.type, "Allocated (₹)": a.allocated, "Spent (₹)": a.spent, Activities: a.activities,
-          Leads: a.leads, Admissions: a.admissions, "Cost per lead (₹)": Math.round(a.cpl), "Cost per admission (₹)": Math.round(a.cpa),
+          Leads: a.leads, "Cost per lead (₹)": Math.round(a.cpl),
         })),
       ),
   },
