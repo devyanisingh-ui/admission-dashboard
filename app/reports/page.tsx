@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import {
   AlertTriangle, BarChart3, CheckCircle2, X, CalendarClock, ChevronLeft, ChevronRight, ClipboardList, Clock, FileSpreadsheet, FileText, Filter, GitMerge, GraduationCap,
-  Handshake, Lock, Search, Share2, ShieldCheck, UserCheck, UserMinus, Users, Wallet,
+  Lock, Search, Share2, ShieldCheck, UserCheck, UserMinus, Users, Wallet,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Drawer } from "@/components/drawer";
@@ -312,7 +312,6 @@ const REPORT_LOOK: Record<string, { icon: typeof Users; tint: string }> = {
   "withdrawal-list": { icon: ClipboardList, tint: "bg-rose-50 text-rose-500 ring-rose-100" },
   budget: { icon: Wallet, tint: "bg-orange-50 text-orange-600 ring-orange-100" },
   social: { icon: Share2, tint: "bg-teal-50 text-teal-600 ring-teal-100" },
-  partners: { icon: Handshake, tint: "bg-violet-50 text-violet-600 ring-violet-100" },
   counsellor: { icon: UserCheck, tint: "bg-sky-50 text-sky-600 ring-sky-100" },
   ews: { icon: ShieldCheck, tint: "bg-slate-100 text-slate-600 ring-slate-200" },
   "mapping-audit": { icon: GitMerge, tint: "bg-slate-100 text-slate-600 ring-slate-200" },

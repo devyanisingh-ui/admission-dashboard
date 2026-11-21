@@ -6,7 +6,7 @@ import {
   AUDIT_LOG, counsellorPerf, kpis, locationById, locationTotals, locationUnits, mappingQueue, pct, strengthMovement,
   withdrawalRecords, withdrawalsByReason, type Cycle,
 } from "./data";
-import { outreachByActivity, partnerMonthly, partnersFor, socialByPlatform, socialCampaigns, socialMonthly } from "./marketing";
+import { outreachByActivity, socialByPlatform, socialCampaigns, socialMonthly } from "./marketing";
 
 export type Row = Record<string, string | number>;
 export type ReportStatus = "ok" | "partial" | "phase2";
@@ -151,22 +151,5 @@ export const REPORT_DEFS: ReportDef[] = [
         Section: "Month", Platform: "All", Campaign: "", School: "All", Month: m.month, Reach: m.reach, Impressions: "", Interactions: "", "Engagement %": "", Prospects: m.prospects,
       })),
     ],
-  },
-  {
-    id: "partners", name: "Partners", group: "Marketing & outreach", sources: ["Dashboard", "LeadSquared", "FABS"], status: "ok",
-    desc: "Connected partners (preschools, crèches, corporates, RWAs) with leads shared and conversion (entered)",
-    build: (ids, cycle) => {
-      const ps = partnersFor(ids, cycle);
-      return [
-        ...ps.map((p) => ({
-          Partner: p.name, Type: p.type, Location: locationById(p.locationId).short, Since: p.since, Month: "Cycle total",
-          "Leads shared": p.leadsShared, Admissions: p.admissions, "Conversion %": p1(p.conversion), Status: p.active ? "Active" : "Inactive",
-        })),
-        ...partnerMonthly(ps).map((m) => ({
-          Partner: "All partners", Type: "All", Location: "All", Since: "", Month: m.month,
-          "Leads shared": m.Preschool + m.Crèche + m.Corporate + m.RWA, Admissions: m.admissions, "Conversion %": "", Status: "",
-        })),
-      ];
-    },
   },
 ];

@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import {
-  Bell, BarChart3, CalendarDays, Network, Database, Download, Handshake, LayoutDashboard, Menu,
+  Bell, BarChart3, CalendarDays, Network, Database, Download, LayoutDashboard, Menu,
   Settings2, Share2, SlidersHorizontal, Table2, UserMinus, Wallet, X,
 } from "lucide-react";
 import Link from "next/link";
@@ -26,7 +26,6 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { href: "/budget", label: "Budget & Outreach", icon: Wallet, perm: "view.marketing" },
       { href: "/social", label: "Social Media Reports", icon: Share2, perm: "view.marketing" },
       { href: "/strength", label: "Withdrawals", icon: UserMinus, perm: "view.location" },
-      { href: "/partners", label: "Partners Report", icon: Handshake, perm: "view.marketing" },
       { href: "/reports", label: "Download Centre", icon: Download, perm: "view.reports" },
     ],
   },

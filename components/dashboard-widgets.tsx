@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import {
-  ArrowDown, ArrowUp, BarChart3, ChevronRight, ClipboardList, DoorOpen, Download, FileText, GraduationCap, Handshake, Lightbulb, Megaphone, Share2,
+  ArrowDown, ArrowUp, BarChart3, ChevronRight, ClipboardList, DoorOpen, Download, FileText, GraduationCap, Lightbulb, Megaphone, Share2,
   Target, TrendingDown, TrendingUp, UserMinus, Users, UserRoundSearch, Wallet,
 } from "lucide-react";
 import Link from "next/link";
@@ -14,7 +14,7 @@ import { useApp } from "@/lib/context";
 import { quickInsights, type DashboardData, type Insight, type InsightKind } from "@/lib/dashboard";
 import { CYCLE_MONTHS, CYCLES, pct, SOURCE_GROUPS, type Cycle } from "@/lib/data";
 import { downloadCsv } from "@/lib/export";
-import { partnersFor, SOCIAL_PLATFORMS, OUTREACH_ACTIVITIES } from "@/lib/marketing";
+import { SOCIAL_PLATFORMS, OUTREACH_ACTIVITIES } from "@/lib/marketing";
 import { REPORT_DEFS, type Row } from "@/lib/reports";
 import { Dropdown } from "./dropdown";
 import { fmt } from "./ui";
@@ -496,7 +496,7 @@ export function QuickInsights({ d }: { d: DashboardData }) {
 /* Download reports panel                                              */
 /* ------------------------------------------------------------------ */
 
-type FilterKey = "session" | "grade" | "source" | "month" | "activity" | "platform" | "partnerType";
+type FilterKey = "session" | "grade" | "source" | "month" | "activity" | "platform";
 interface PanelReport { id: string; title: string; desc: string; icon: typeof Users; color: string; href: string; filters: FilterKey[] }
 
 const PANEL_REPORTS: PanelReport[] = [
@@ -506,13 +506,12 @@ const PANEL_REPORTS: PanelReport[] = [
   { id: "budget", title: "Budget & Outreach", desc: "Allocation, actual spend, activities, leads", icon: Wallet, color: "bg-orange-500", href: "/budget", filters: ["session", "activity"] },
   { id: "social", title: "Social Media", desc: "Reach, impressions, interactions, prospects", icon: Share2, color: "bg-teal-600", href: "/social", filters: ["platform", "month"] },
   { id: "withdrawals", title: "Withdrawals", desc: "Withdrawals by location and reason", icon: UserMinus, color: "bg-rose-500", href: "/strength", filters: ["session"] },
-  { id: "partners", title: "Partners", desc: "Connected partners and lead sharing", icon: Handshake, color: "bg-violet-600", href: "/partners", filters: ["partnerType", "month"] },
 ];
 
 /** Narrows exported rows by the panel's quick filters, using whichever matching column the report has. */
 function applyFilters(rows: Row[], f: Partial<Record<FilterKey, string>>) {
   const cols: Record<FilterKey, string[]> = {
-    session: [], grade: ["Grade / programme", "Grade"], source: ["Source group"], month: ["Month"], activity: ["Activity"], platform: ["Platform"], partnerType: ["Type"],
+    session: [], grade: ["Grade / programme", "Grade"], source: ["Source group"], month: ["Month"], activity: ["Activity"], platform: ["Platform"],
   };
   return rows.filter((r) =>
     (Object.keys(f) as FilterKey[]).every((k) => {
@@ -535,7 +534,6 @@ function ReportRow({ r, ids, grades }: { r: PanelReport; ids: string[]; grades: 
     month: [{ value: "All", label: "All months" }, ...CYCLE_MONTHS.map((m) => ({ value: m, label: m }))],
     activity: [{ value: "All", label: "All activities" }, ...OUTREACH_ACTIVITIES.map((a) => ({ value: a.type, label: a.type }))],
     platform: [{ value: "All", label: "All platforms" }, ...SOCIAL_PLATFORMS.map((p) => ({ value: p, label: p }))],
-    partnerType: [{ value: "All", label: "All partner types" }, ...["Preschool", "Crèche", "Corporate", "RWA"].map((p) => ({ value: p, label: p }))],
   };
   const download = () => {
     const cycle = (f.session ?? app.cycle) as Cycle;
@@ -594,45 +592,11 @@ export function DownloadReportsPanel({ ids, grades }: { ids: string[]; grades: s
       <ul className="flex min-h-0 flex-col divide-y divide-slate-100 overflow-y-auto scroll-thin xl:flex-1">
         {PANEL_REPORTS.map((r) => <ReportRow key={r.id} r={r} ids={ids} grades={grades} />)}
       </ul>
-      <PartnersPreview ids={ids} />
       <div className="border-t border-slate-100 px-4 py-2.5 text-right">
         <Link href="/reports" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline">
           <FileText size={13} /> All reports & snapshots
         </Link>
       </div>
     </section>
-  );
-}
-
-function PartnersPreview({ ids }: { ids: string[] }) {
-  const { cycle, can } = useApp();
-  if (!can("view.marketing")) return null;
-  const top = partnersFor(ids, cycle).sort((a, b) => b.leadsShared - a.leadsShared).slice(0, 4);
-  return (
-    <div className="mx-3 mb-3 overflow-hidden rounded-lg border border-slate-200 bg-slate-50/50">
-      <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-brand-900">
-        <Users size={16} className="text-brand-700" /> Partners Report Preview
-      </div>
-      <table className="w-full text-[11px] tabular">
-        <thead className="bg-slate-100 text-slate-600">
-          <tr>
-            <th className="px-3 py-1.5 text-left font-semibold">Connected partner</th>
-            <th className="px-2 py-1.5 text-left font-semibold">Type</th>
-            <th className="px-2 py-1.5 text-right font-semibold">Leads shared</th>
-            <th className="px-3 py-1.5 text-right font-semibold">Conversion</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 bg-white">
-          {top.map((p) => (
-            <tr key={p.id}>
-              <td className="max-w-[150px] truncate px-3 py-1.5 text-slate-700" title={p.name}>{p.name}</td>
-              <td className="px-2 py-1.5 text-slate-500">{p.type}</td>
-              <td className="px-2 py-1.5 text-right">{fmt(p.leadsShared)}</td>
-              <td className="px-3 py-1.5 text-right font-semibold">{p.conversion.toFixed(0)}%</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }

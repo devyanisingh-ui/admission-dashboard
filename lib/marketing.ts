@@ -31,7 +31,6 @@ const BUDGET_MIX = [0.3, 0.16, 0.14, 0.16, 0.08, 0.16];
 /** How an annual allocation is planned across the cycle (Oct → Sep). */
 export const PLAN_SHAPE = [0.1, 0.14, 0.15, 0.14, 0.12, 0.1, 0.08, 0.06, 0.04, 0.03, 0.02, 0.02];
 const SOCIAL_SHAPE = [0.07, 0.11, 0.13, 0.14, 0.13, 0.11, 0.09, 0.07, 0.05, 0.04, 0.03, 0.03];
-const PARTNER_SHAPE = [0.06, 0.12, 0.15, 0.16, 0.14, 0.11, 0.09, 0.07, 0.04, 0.03, 0.02, 0.01];
 
 export const SOCIAL_PLATFORMS = ["Instagram", "Facebook", "YouTube", "LinkedIn", "Google Business"] as const;
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
@@ -357,26 +356,3 @@ export function socialCampaigns(locIds: string[], cycle: Cycle) {
 export function socialSpend(locIds: string[], cycle: Cycle) {
   return inLocs(cycleData(cycle).campaigns, locIds).reduce((s, c) => s + c.spend, 0);
 }
-
-/* ------------------------------------------------------------------ */
-/* Partners                                                            */
-/* ------------------------------------------------------------------ */
-
-export interface Partner extends PartnerRec { conversion: number }
-
-export function partnersFor(locIds: string[], cycle: Cycle): Partner[] {
-  return inLocs(cycleData(cycle).partners, locIds).map((p) => ({ ...p, conversion: p.leadsShared ? (p.admissions / p.leadsShared) * 100 : 0 }));
-}
-
-/** Month-by-month leads shared and admissions for a set of partners (cycle Oct → Sep), spread from their cycle totals. */
-export function partnerMonthly(partners: Partner[]) {
-  return CYCLE_MONTHS.map((month, i) => {
-    const row: { month: string; admissions: number } & Record<PartnerType, number> = {
-      month, admissions: 0, Preschool: 0, Crèche: 0, Corporate: 0, RWA: 0,
-    };
-    for (const t of PARTNER_TYPES) row[t] = Math.round(partners.filter((p) => p.type === t).reduce((s, p) => s + p.leadsShared, 0) * PARTNER_SHAPE[i]);
-    row.admissions = Math.round(partners.reduce((s, p) => s + p.admissions, 0) * PARTNER_SHAPE[Math.max(0, i - 1)]);
-    return row;
-  });
-}
-
