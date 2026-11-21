@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import {
-  ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronLeft, ChevronRight, ClipboardList, GraduationCap, Home, Percent, Search, UserMinus,
+  ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronLeft, ChevronRight, ClipboardList, GraduationCap, Percent, Search, UserMinus,
   UserRoundSearch, Users, X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -131,6 +131,7 @@ function Drilldown() {
       <Breadcrumb
         st={st}
         isHE={!!isHE}
+        funnel={stats.funnel}
         context={[`Session ${app.cycle.replace("-", " – ")}`, app.sourceGroup === "All" ? "All sources" : `${app.sourceGroup} leads`, range]}
       />
 
@@ -158,38 +159,32 @@ function Drilldown() {
 
 const LEVELS = ["Group", "Vertical", "School", "Grade", "Stage", "Records"];
 
-function Breadcrumb({ st, isHE, context }: { st: ReturnType<typeof useDrillState>; isHE: boolean; context: string[] }) {
+function Breadcrumb({ st, isHE, context, funnel }: { st: ReturnType<typeof useDrillState>; isHE: boolean; context: string[]; funnel: NodeStats["funnel"] }) {
   const { path, root, go } = st;
-  const crumbs: { label: string; sub: string; to: DrillPath; locked: boolean }[] = [];
-  if (!root.vertical) crumbs.push({ label: "Apeejay Group", sub: "Group", to: {}, locked: false });
-  if (path.vertical) crumbs.push({ label: path.vertical, sub: "Vertical", to: { vertical: path.vertical }, locked: !!root.loc });
-  if (path.loc) {
-    const l = locationById(path.loc);
-    crumbs.push({ label: l.short, sub: l.vertical === "Higher Ed" ? "Institution" : "School", to: { vertical: path.vertical, loc: path.loc }, locked: false });
-  }
-  if (path.loc && path.grade) {
-    crumbs.push({ label: unitLabel(path.grade), sub: path.vertical === "Higher Ed" ? "Programme" : "Grade", to: { vertical: path.vertical, loc: path.loc, grade: path.grade }, locked: false });
-  }
-  if (path.stage) crumbs.push({ label: STAGES.find((s) => s.key === path.stage)!.label, sub: "Funnel stage", to: path, locked: false });
-  // Hide crumbs above the role's scope (a Location Head starts at their school).
-  const visible = crumbs.filter((c) => !c.locked);
-  const up = visible.length > 1 ? visible[visible.length - 2].to : null;
-  // A grade "focus" above school level shows as a removable chip.
+  const app = useApp();
+  const lvl = levelOf(path);
+  // One step up the path, never above the role's own scope.
+  const parent: DrillPath | null =
+    path.stage ? { ...path, stage: undefined } : path.grade ? { ...path, grade: undefined } : path.loc && !root.loc ? { vertical: path.vertical } : path.vertical && !root.vertical ? {} : null;
+  // A grade "focus" above school level (from a Dashboard deep link) shows as a removable chip.
   const focus = !path.loc && path.grade;
 
-  // What the next click opens, shown as a hint after the last crumb.
-  const lvl = levelOf(path);
-  const next =
-    lvl === "group" ? "a vertical" : lvl === "vertical" ? (isHE ? "an institution" : "a school") : lvl === "school" ? (isHE ? "a programme" : "a grade") : lvl === "grade" ? "a funnel stage" : null;
   const depth = ["group", "vertical", "school", "grade", "stage"].indexOf(lvl) + (lvl === "stage" ? 1 : 0);
   const levelNames = LEVELS.map((l) => (isHE && l === "School" ? "Institution" : isHE && l === "Grade" ? "Programme" : l));
+
+  // Menu contents. Choosing a level clears everything below it; the first option of each menu goes back up.
+  const verticals = (["Schools", "Higher Ed"] as Vertical[]).filter((v) => app.allowedLocations.some((l) => l.vertical === v));
+  const schools = app.allowedLocations.filter((l) => !path.vertical || l.vertical === path.vertical);
+  const loc = path.loc ? locationById(path.loc) : null;
+  const schoolWord = path.vertical === "Higher Ed" ? "institution" : path.vertical === "Schools" ? "school" : "school / institution";
+  const gradeWord = isHE ? "programme" : "grade";
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 pb-2.5 pt-3">
         <div>
           <h1 className="text-lg font-bold leading-tight text-brand-900">Drill-down</h1>
-          <p className="text-xs text-slate-500">Start from the group and click any bar or row to go one level deeper</p>
+          <p className="text-xs text-slate-500">Pick a level from the menus, or click any bar or row to go one level deeper</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {context.map((c) => (
@@ -200,47 +195,59 @@ function Breadcrumb({ st, isHE, context }: { st: ReturnType<typeof useDrillState
 
       <nav aria-label="Drill path" className="no-print flex flex-wrap items-center gap-2 border-t border-slate-100 px-3 py-2">
         <button
-          type="button" disabled={!up} onClick={() => up && go(up)} title="Up one level" aria-label="Up one level"
+          type="button" disabled={!parent} onClick={() => parent && go(parent)} title="Up one level" aria-label="Up one level"
           className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-35"
         >
           <ChevronLeft size={16} />
         </button>
-        <ol className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">
-          {visible.map((c, i) => {
-            const last = i === visible.length - 1;
-            return (
-              <li key={c.sub} className="flex items-center gap-0.5">
-                {i > 0 && <ChevronRight size={14} className="text-slate-300" />}
-                <button
-                  type="button" disabled={last} onClick={() => go(c.to)} aria-current={last ? "page" : undefined}
-                  className={clsx("flex flex-col items-start rounded-lg px-2.5 py-1 text-left transition", last ? "bg-brand-600 text-white" : "hover:bg-slate-100")}
-                >
-                  <span className={clsx("text-[10px] font-medium uppercase tracking-wide", last ? "text-brand-100" : "text-slate-400")}>{c.sub}</span>
-                  <span className={clsx("flex items-center gap-1 text-sm font-semibold", last ? "text-white" : "text-brand-700")}>
-                    {i === 0 && !root.vertical && <Home size={13} />}
-                    {c.label}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-          {next && (
-            <li className="flex items-center gap-0.5">
-              <ChevronRight size={14} className="text-slate-300" />
-              <span className="rounded-lg border border-dashed border-slate-300 px-2.5 py-1.5 text-xs text-slate-400">Choose {next} below</span>
-            </li>
-          )}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-2">
+          <PathMenu
+            label="Vertical" value={path.vertical ?? ""} disabled={!!root.vertical}
+            lockedHint={root.vertical ? "Fixed to your role's scope" : undefined}
+            options={[...(root.vertical ? [] : [{ value: "", label: "Apeejay Group · all verticals" }]), ...verticals.map((v) => ({ value: v, label: v }))]}
+            onChange={(v) => {
+              // A grade focus survives only if the chosen vertical offers that grade.
+              const keep = path.grade && app.allowedLocations.some((l) => (!v || l.vertical === v) && l.units.includes(path.grade!)) ? path.grade : undefined;
+              go(v ? { vertical: v as Vertical, grade: keep } : { grade: keep });
+            }}
+          />
+          <ChevronRight size={14} className="shrink-0 text-slate-300" />
+          <PathMenu
+            label={isHE ? "Institution" : path.vertical === "Schools" ? "School" : "School / institution"} value={path.loc ?? ""} disabled={!!root.loc}
+            lockedHint={root.loc ? "Fixed to your role's scope" : undefined}
+            options={[...(root.loc ? [] : [{ value: "", label: `All ${schoolWord}s` }]), ...schools.map((l) => ({ value: l.id, label: l.short, hint: l.vertical === "Higher Ed" ? "Higher Ed" : l.board }))]}
+            onChange={(id) => {
+              if (!id) return go({ vertical: path.vertical });
+              const l = locationById(id);
+              go({ vertical: l.vertical, loc: l.id, grade: path.grade && l.units.includes(path.grade) ? path.grade : undefined });
+            }}
+          />
+          <ChevronRight size={14} className="shrink-0 text-slate-300" />
+          <PathMenu
+            label={isHE ? "Programme" : "Grade"} value={loc ? path.grade ?? "" : ""} disabled={!loc}
+            lockedHint={!loc ? `Choose a ${schoolWord} first` : undefined}
+            options={loc ? [{ value: "", label: `All ${gradeWord}s` }, ...loc.units.map((u) => ({ value: u, label: unitLabel(u) }))] : [{ value: "", label: `All ${gradeWord}s` }]}
+            onChange={(u) => go({ vertical: path.vertical, loc: path.loc, grade: u || undefined })}
+          />
+          <ChevronRight size={14} className="shrink-0 text-slate-300" />
+          <PathMenu
+            label="Funnel stage" value={path.stage ?? ""} disabled={!loc || !path.grade}
+            lockedHint={!loc || !path.grade ? `Choose a ${gradeWord} first` : undefined}
+            options={[
+              { value: "", label: "All stages · funnel" },
+              ...(loc && path.grade ? STAGES.map((x, i) => ({ value: x.key, label: `${i + 1}. ${x.label}`, hint: fmt(funnel[x.key]) })) : []),
+            ]}
+            onChange={(k) => go({ ...path, stage: (k || undefined) as StageKey | undefined })}
+          />
           {focus && (
-            <li className="ml-1">
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
-                {path.vertical === "Higher Ed" ? "Programme" : "Grade"} focus: {unitLabel(path.grade!)}
-                <button type="button" onClick={() => go({ ...path, grade: undefined })} aria-label="Clear grade focus" className="rounded-full p-0.5 hover:bg-amber-100">
-                  <X size={12} />
-                </button>
-              </span>
-            </li>
+            <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
+              {path.vertical === "Higher Ed" ? "Programme" : "Grade"} focus: {unitLabel(path.grade!)}
+              <button type="button" onClick={() => go({ ...path, grade: undefined })} aria-label="Clear grade focus" className="rounded-full p-0.5 hover:bg-amber-100">
+                <X size={12} />
+              </button>
+            </span>
           )}
-        </ol>
+        </div>
         {/* Depth indicator: where this level sits in the six-level path. */}
         <div className="hidden items-center gap-1.5 lg:flex" aria-label={`Level ${depth + 1} of ${LEVELS.length}: ${levelNames[depth]}`}>
           {levelNames.map((l, i) => (
@@ -250,6 +257,18 @@ function Breadcrumb({ st, isHE, context }: { st: ReturnType<typeof useDrillState
         </div>
       </nav>
     </section>
+  );
+}
+
+/** One level of the drill path as a dropdown, with its level name above it. */
+function PathMenu({
+  label, value, options, onChange, disabled, lockedHint,
+}: { label: string; value: string; options: { value: string; label: string; hint?: string }[]; onChange: (v: string) => void; disabled?: boolean; lockedHint?: string }) {
+  return (
+    <div className="flex flex-col" title={disabled ? lockedHint : undefined}>
+      <span className="mb-0.5 px-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-400">{label}</span>
+      <Dropdown size="sm" ariaLabel={label} value={value} onChange={onChange} options={options} disabled={disabled} triggerWidth="min-w-[9.5rem]" />
+    </div>
   );
 }
 

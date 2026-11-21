@@ -442,7 +442,7 @@ function DrillFilters() {
     <section className="no-print mb-5 rounded-xl border border-slate-200 bg-white px-4 pb-3.5 pt-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-xs font-bold uppercase tracking-wider text-brand-900">Global filters</h2>
-        <span className="text-[11px] text-slate-500">Vertical, school and grade are chosen with the breadcrumb below</span>
+        <span className="text-[11px] text-slate-500">Vertical, school and grade are chosen with the Drill-down menus below</span>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:max-w-4xl">
         <Field label="Academic session">
