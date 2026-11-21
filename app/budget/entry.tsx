@@ -49,7 +49,7 @@ export function BudgetEntry() {
   );
 }
 
-type Entry = ReturnType<typeof useEntryStore>;
+export type Entry = ReturnType<typeof useEntryStore>;
 
 function LocationFilter({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { filteredLocations } = useApp();
@@ -295,10 +295,11 @@ function SpendLog({ rows, canEdit, entry }: { rows: SpendRec[]; canEdit: boolean
   );
 }
 
-function SpendEditor({ row, entry, onClose }: { row: SpendRec | null; entry: Entry; onClose: () => void }) {
+/** Add or edit one month's spend, activities and leads. Also opened from the Outcomes by activity report. */
+export function SpendEditor({ row, entry, onClose, activity }: { row: SpendRec | null; entry: Entry; onClose: () => void; /** Pre-selects the activity for a new entry. */ activity?: string }) {
   const { filteredLocations } = useApp();
   const [f, setF] = useState({
-    locationId: row?.locationId ?? filteredLocations[0]?.id ?? "", activity: row?.activity ?? OUTREACH_ACTIVITIES[0].type, month: row?.month ?? "Nov",
+    locationId: row?.locationId ?? filteredLocations[0]?.id ?? "", activity: row?.activity ?? activity ?? OUTREACH_ACTIVITIES[0].type, month: row?.month ?? "Nov",
     amount: row ? String(row.amount) : "", count: row ? String(row.count) : "", leads: row ? String(row.leads ?? 0) : "", note: row?.note ?? "",
   });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));

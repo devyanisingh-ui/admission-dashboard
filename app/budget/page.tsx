@@ -1,13 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { AlertTriangle, Award, ClipboardList, IndianRupee, PiggyBank, Target, Users, Wallet } from "lucide-react";
+import { AlertTriangle, Award, Plus, ClipboardList, IndianRupee, PiggyBank, Target, Users, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Panel, SnapshotCard, SOURCE_COLORS } from "@/components/dashboard-widgets";
 import { ExportButtons } from "@/components/export-buttons";
 import { Guard, PageHeader, Tabs, fmt, fmtINR } from "@/components/ui";
-import { BudgetEntry } from "./entry";
+import { BudgetEntry, SpendEditor } from "./entry";
+import { EntryToast, useEntryStore } from "@/components/entry-kit";
 import { useApp } from "@/lib/context";
 import { pct } from "@/lib/data";
 import { outreachByActivity, outreachMonthly, outreachTotals, type OutreachRow } from "@/lib/marketing";
@@ -26,6 +27,10 @@ export default function BudgetPage() {
 function Budget() {
   const { filteredLocations, cycle, seatVersion, can } = useApp();
   const [tab, setTab] = useState<"report" | "entry">("report");
+  // Adding outcome data straight from the Outcomes by activity report: null = closed, "" = any activity.
+  const [adding, setAdding] = useState<string | null>(null);
+  const entry = useEntryStore();
+  const canEnter = can("marketing.edit");
   const ids = filteredLocations.map((l) => l.id);
   const key = ids.join() + cycle + seatVersion;
   const rows = useMemo(() => outreachByActivity(ids, cycle), [key]);
@@ -117,7 +122,21 @@ function Budget() {
         </Panel>
       </div>
 
-      <Panel className="mt-4" title="Outcomes by activity" sub="spend, activities and leads entered in the Spend log">
+      <Panel
+        className="mt-4"
+        title="Outcomes by activity"
+        sub={canEnter ? "entered by hand · add a month's spend, activities and leads for any activity" : "spend, activities and leads entered by the Location Admissions Head or Central Admin team"}
+        actions={
+          <div className="flex items-center gap-2">
+            <button onClick={() => setTab("entry")} className="rounded-md px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100">{canEnter ? "View / edit log" : "View log"}</button>
+            {canEnter && (
+              <button onClick={() => setAdding("")} className="inline-flex items-center gap-1 rounded-md bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-700">
+                <Plus size={13} /> Add entry
+              </button>
+            )}
+          </div>
+        }
+      >
         <div className="overflow-x-auto scroll-thin">
           <table className="w-full text-sm tabular">
             <thead>
@@ -141,7 +160,19 @@ function Budget() {
                         <span className="h-2.5 w-2.5 rounded-full" style={{ background: SOURCE_COLORS[r.group] }} />
                         {r.type}
                       </div>
-                      <div className="pl-[18px] text-[11px] text-slate-400">{r.group} leads</div>
+                      <div className="flex items-center gap-2 pl-[18px] text-[11px] text-slate-400">
+                        {r.group} leads
+                        {canEnter && (
+                          <button
+                            onClick={() => setAdding(r.type)}
+                            aria-label={`Add ${r.type} entry`}
+                            title={`Add a month's spend, activities and leads for ${r.type}`}
+                            className="inline-flex items-center gap-0.5 rounded px-1 font-semibold text-brand-700 hover:bg-brand-50"
+                          >
+                            <Plus size={11} /> Add
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">{fmtINR(r.spent)}</td>
                     <td className="px-3 py-2 text-right">{r.activities} <span className="text-[11px] text-slate-400">{r.unit}</span></td>
@@ -169,6 +200,8 @@ function Budget() {
           Green / red cost = cheapest / costliest per lead.
         </p>
       </Panel>
+      {adding !== null && <SpendEditor row={null} entry={entry} activity={adding || undefined} onClose={() => setAdding(null)} />}
+      <EntryToast text={entry.toast} onClose={entry.clearToast} />
 
       {bySchool.length > 1 && (
         <Panel className="mt-4" title="By school" sub="sorted by cost per lead, lowest first">
