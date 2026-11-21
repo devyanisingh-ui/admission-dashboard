@@ -433,9 +433,10 @@ function StagesView({ stats, st }: { stats: NodeStats; st: ReturnType<typeof use
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
         <div>
           <h2 className="text-base font-bold text-brand-900">Funnel stages</h2>
-          <p className="mt-0.5 text-xs text-slate-500">LeadSquared → SaaS → FABS · each stage counts everyone who reached it · click a stage to open its records</p>
+          <p className="mt-0.5 text-xs text-slate-500">LeadSquared → SaaS → FABS · each stage counts everyone who reached it · pick a stage or click a row to open its records</p>
         </div>
-        <div className="flex flex-wrap gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <StagePicker funnel={f} onPick={open} />
           <span className="rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700">
             Overall conversion <b className="tabular">{pctFmt(top ? (f.enrolled / top) * 100 : 0)}</b>
           </span>
@@ -495,6 +496,18 @@ function StagesView({ stats, st }: { stats: NodeStats; st: ReturnType<typeof use
         </table>
       </div>
     </section>
+  );
+}
+
+/** Funnel stage dropdown: opens a stage's records (or switches stage when one is open). */
+function StagePicker({ funnel, value, onPick }: { funnel: NodeStats["funnel"]; value?: StageKey; onPick: (k: StageKey) => void }) {
+  const options = STAGES.map((x, i) => ({ value: x.key as StageKey | "", label: `${i + 1}. ${x.label}`, hint: fmt(funnel[x.key]) }));
+  return (
+    <Dropdown<StageKey | "">
+      size="sm" ariaLabel="Funnel stage" triggerWidth="w-56" value={value ?? ""}
+      onChange={(v) => v && onPick(v)}
+      options={value ? options : [{ value: "", label: "Choose a funnel stage…" }, ...options]}
+    />
   );
 }
 
@@ -614,7 +627,8 @@ function RecordsView({ stats, st, scope }: { stats: NodeStats; st: ReturnType<ty
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <StagePicker funnel={stats.funnel} value={stage.key} onPick={(k) => k !== stage.key && st.go({ ...path, stage: k })} />
           <ExportButtons name={`drilldown-${path.loc}-${unitLabel(path.grade!)}-${stage.key}`.replace(/[^\w-]+/g, "-")} rows={exportRows} />
         </div>
       </header>
