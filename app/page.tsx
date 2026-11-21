@@ -12,12 +12,11 @@ import { ExportButtons } from "@/components/export-buttons";
 import { SegmentComparison } from "@/components/segment-comparison";
 import { SchoolStrength } from "@/components/strength-widget";
 import { WeeklySnapshots } from "@/components/weekly-snapshots";
-import { Badge, Card, Guard, Note, Rag, fmt, fmtINR, fmtPct } from "@/components/ui";
+import { Badge, Card, Guard, Note, Rag, fmt, fmtPct } from "@/components/ui";
 import { rangeLabelOf, useApp } from "@/lib/context";
 import { dashboardData } from "@/lib/dashboard";
 import { kpis, locationById, locationUnits, schoolGrades, sumStats } from "@/lib/data";
 import { drillHref } from "@/lib/drilldown";
-import { costPerAdmission } from "@/lib/marketing";
 
 export default function DashboardPage() {
   const { can } = useApp();
@@ -121,7 +120,7 @@ function Dashboard() {
 /* Group / vertical comparison (group roles, more than one school)     */
 /* ------------------------------------------------------------------ */
 
-type SortKey = "leads" | "applications" | "enrolled" | "targetAch" | "seatFill" | "overall" | "withdrawals" | "pending" | "unmapped" | "cpa";
+type SortKey = "leads" | "applications" | "enrolled" | "targetAch" | "seatFill" | "overall" | "withdrawals" | "pending" | "unmapped";
 const SORT_COLS: { key: SortKey; label: string; lowerIsBetter?: boolean }[] = [
   { key: "leads", label: "Leads" },
   { key: "applications", label: "Applications" },
@@ -132,7 +131,6 @@ const SORT_COLS: { key: SortKey; label: string; lowerIsBetter?: boolean }[] = [
   { key: "withdrawals", label: "Withdrawals", lowerIsBetter: true },
   { key: "pending", label: "Pending fee", lowerIsBetter: true },
   { key: "unmapped", label: "Unmapped", lowerIsBetter: true },
-  { key: "cpa", label: "Cost / adm.", lowerIsBetter: true },
 ];
 
 function GroupSection() {
@@ -158,7 +156,7 @@ function GroupSection() {
           loc: l, k,
           v: {
             leads: k.leads, applications: k.applications, enrolled: k.enrolled, targetAch: k.targetAch, seatFill: k.seatFill, overall: k.overall,
-            withdrawals: k.withdrawals, pending: k.pending, unmapped: k.unmapped, cpa: costPerAdmission(l.id, cycle),
+            withdrawals: k.withdrawals, pending: k.pending, unmapped: k.unmapped,
           } as Record<SortKey, number>,
         };
       }),
@@ -219,7 +217,7 @@ function GroupSection() {
               sorted.map(({ loc, k, v }, i) => ({
                 Rank: i + 1, School: loc.name, Vertical: loc.vertical, Board: loc.board, Leads: k.leads, Applications: k.applications, "FABS enrolled": k.enrolled,
                 "Target ach. %": k.targetAch.toFixed(1), "Seat fill %": k.seatFill.toFixed(1), "Conversion %": k.overall.toFixed(1), Withdrawals: k.withdrawals,
-                "Pending fee": k.pending, Unmapped: k.unmapped, "Cost per admission (₹)": Math.round(v.cpa),
+                "Pending fee": k.pending, Unmapped: k.unmapped,
               }))
             }
           />
@@ -267,7 +265,6 @@ function GroupSection() {
                   <td className="px-3 py-2 text-right">{fmt(k.withdrawals)}</td>
                   <td className="px-3 py-2 text-right">{fmt(k.pending)}</td>
                   <td className="px-3 py-2 text-right">{k.unmapped ? <Badge tone="red">{k.unmapped}</Badge> : <span className="text-slate-400">0</span>}</td>
-                  <td className="px-3 py-2 text-right">{fmtINR(v.cpa)}</td>
                 </tr>
               ))}
             </tbody>

@@ -380,5 +380,3 @@ export function partnerMonthly(partners: Partner[]) {
   });
 }
 
-/** Cost per admission for a location (used in the leaderboard). */
-export const costPerAdmission = (locId: string, cycle: Cycle) => outreachTotals([locId], cycle).cpa;
