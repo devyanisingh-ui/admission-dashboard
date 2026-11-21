@@ -120,7 +120,7 @@ function Dashboard() {
 /* Group / vertical comparison (group roles, more than one school)     */
 /* ------------------------------------------------------------------ */
 
-type SortKey = "leads" | "applications" | "enrolled" | "targetAch" | "seatFill" | "overall" | "withdrawals" | "pending" | "unmapped";
+type SortKey = "leads" | "applications" | "enrolled" | "targetAch" | "seatFill" | "overall" | "withdrawals" | "unmapped";
 const SORT_COLS: { key: SortKey; label: string; lowerIsBetter?: boolean }[] = [
   { key: "leads", label: "Leads" },
   { key: "applications", label: "Applications" },
@@ -129,7 +129,6 @@ const SORT_COLS: { key: SortKey; label: string; lowerIsBetter?: boolean }[] = [
   { key: "seatFill", label: "Seat fill" },
   { key: "overall", label: "Conv." },
   { key: "withdrawals", label: "Withdrawals", lowerIsBetter: true },
-  { key: "pending", label: "Pending fee", lowerIsBetter: true },
   { key: "unmapped", label: "Unmapped", lowerIsBetter: true },
 ];
 
@@ -143,7 +142,7 @@ function GroupSection() {
     () =>
       filteredLocations.filter((l) => grade === "All" || l.units.includes(grade)).map((l) => {
         // Leads, applications and admissions follow Grade, Lead source and Date range (as the cards above);
-        // seats, targets, withdrawals and pending fees are roster figures, so only Grade narrows them.
+        // seats, targets and withdrawals are roster figures, so only Grade narrows them.
         const units = locationUnits(l.id, cycle).filter((u) => grade === "All" || u.unit === grade);
         const base = kpis(sumStats(units));
         const dd = dashboardData({ ids: [l.id], cycle, grade, sourceGroup, dateRange, custom: customRange });
@@ -156,7 +155,7 @@ function GroupSection() {
           loc: l, k,
           v: {
             leads: k.leads, applications: k.applications, enrolled: k.enrolled, targetAch: k.targetAch, seatFill: k.seatFill, overall: k.overall,
-            withdrawals: k.withdrawals, pending: k.pending, unmapped: k.unmapped,
+            withdrawals: k.withdrawals, unmapped: k.unmapped,
           } as Record<SortKey, number>,
         };
       }),
@@ -217,7 +216,7 @@ function GroupSection() {
               sorted.map(({ loc, k, v }, i) => ({
                 Rank: i + 1, School: loc.name, Vertical: loc.vertical, Board: loc.board, Leads: k.leads, Applications: k.applications, "FABS enrolled": k.enrolled,
                 "Target ach. %": k.targetAch.toFixed(1), "Seat fill %": k.seatFill.toFixed(1), "Conversion %": k.overall.toFixed(1), Withdrawals: k.withdrawals,
-                "Pending fee": k.pending, Unmapped: k.unmapped,
+                Unmapped: k.unmapped,
               }))
             }
           />
@@ -263,7 +262,6 @@ function GroupSection() {
                   <td className="px-3 py-2"><BarCell value={k.seatFill} good={82} ok={72} /></td>
                   <td className="px-3 py-2 text-right">{fmtPct(k.overall, 1)}</td>
                   <td className="px-3 py-2 text-right">{fmt(k.withdrawals)}</td>
-                  <td className="px-3 py-2 text-right">{fmt(k.pending)}</td>
                   <td className="px-3 py-2 text-right">{k.unmapped ? <Badge tone="red">{k.unmapped}</Badge> : <span className="text-slate-400">0</span>}</td>
                 </tr>
               ))}
