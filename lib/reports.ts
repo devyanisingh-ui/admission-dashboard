@@ -6,7 +6,7 @@ import {
   AUDIT_LOG, counsellorPerf, kpis, locationById, locationTotals, locationUnits, mappingQueue, pct, strengthMovement,
   withdrawalRecords, withdrawalsByReason, type Cycle,
 } from "./data";
-import { outreachByActivity, partnerMonthly, partnersFor, socialByPlatform, socialCampaigns, socialMonthly } from "./marketing";
+import { outreachByActivity, socialByPlatform, socialCampaigns, socialMonthly } from "./marketing";
 
 export type Row = Record<string, string | number>;
 export type ReportStatus = "ok" | "partial" | "phase2";
@@ -125,13 +125,13 @@ export const REPORT_DEFS: ReportDef[] = [
     ],
   },
   {
-    id: "budget", name: "Budget & Outreach", group: "Marketing & outreach", sources: ["Dashboard", "LeadSquared", "FABS"], status: "ok",
-    desc: "Allocation, actual spend and activities (entered) with outcomes (leads, admissions, cost per lead / admission)",
+    id: "budget", name: "Budget & Outreach", group: "Marketing & outreach", sources: ["Dashboard"], status: "ok",
+    desc: "Allocation, actual spend, activities and leads (all entered) with cost per lead",
     build: (ids, cycle) =>
       ids.flatMap((id) =>
         outreachByActivity([id], cycle).map((a) => ({
           Location: locationById(id).name, Activity: a.type, "Allocated (₹)": a.allocated, "Spent (₹)": a.spent, Activities: a.activities,
-          Leads: a.leads, Admissions: a.admissions, "Cost per lead (₹)": Math.round(a.cpl), "Cost per admission (₹)": Math.round(a.cpa),
+          Leads: a.leads, "Cost per lead (₹)": Math.round(a.cpl),
         })),
       ),
   },
@@ -151,22 +151,5 @@ export const REPORT_DEFS: ReportDef[] = [
         Section: "Month", Platform: "All", Campaign: "", School: "All", Month: m.month, Reach: m.reach, Impressions: "", Interactions: "", "Engagement %": "", Prospects: m.prospects,
       })),
     ],
-  },
-  {
-    id: "partners", name: "Partners", group: "Marketing & outreach", sources: ["Dashboard", "LeadSquared", "FABS"], status: "ok",
-    desc: "Connected partners (preschools, crèches, corporates, RWAs) with leads shared and conversion (entered)",
-    build: (ids, cycle) => {
-      const ps = partnersFor(ids, cycle);
-      return [
-        ...ps.map((p) => ({
-          Partner: p.name, Type: p.type, Location: locationById(p.locationId).short, Since: p.since, Month: "Cycle total",
-          "Leads shared": p.leadsShared, Admissions: p.admissions, "Conversion %": p1(p.conversion), Status: p.active ? "Active" : "Inactive",
-        })),
-        ...partnerMonthly(ps).map((m) => ({
-          Partner: "All partners", Type: "All", Location: "All", Since: "", Month: m.month,
-          "Leads shared": m.Preschool + m.Crèche + m.Corporate + m.RWA, Admissions: m.admissions, "Conversion %": "", Status: "",
-        })),
-      ];
-    },
   },
 ];

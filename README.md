@@ -44,11 +44,10 @@ Open <http://localhost:3000>.
 - **Dashboard** — global filters (vertical, school / institution, board, grade, session, lead source, date range incl. custom start / end dates), admissions snapshot, quick insights, grade-wise vacancy, **current strength by school**, source performance, lead trend, end-to-end funnel, and a group comparison for multi-school roles.
 - **Drill-down** — move from the whole group → vertical → school → grade → funnel stage → individual records, with breadcrumbs, measure switcher and shareable URLs.
 - **Grade-wise Reports** (seats, vacancy and target achievement per grade), **Withdrawals** (reasons, months, grades, schools, register and strength movement).
-- **Budget & Outreach**, **Social Media Reports** and **Partners Report** for marketing.
+- **Budget & Outreach** and **Social Media Reports** for marketing.
 - **Download Centre** — every report as Excel (CSV) or a printable PDF, plus locked weekly / monthly snapshots.
 
 ### Operations
-- **Admission Mapping** — link FABS admissions to LeadSquared leads (suggested matches, manual search, direct admissions).
 - **System Views** — raw records and sync status from each source system.
 - **Alerts** — seat-fill, close-out, unmapped-admission and sync alerts.
 
@@ -86,7 +85,7 @@ Switch role from the menu in the top-right corner to preview what each user sees
 
 - **Mock data** is generated in `lib/data.ts` from a seeded random generator, so figures are stable between reloads. "Today" in the demo is **17 Nov 2026**.
 - **Seat Matrix edits** and **Masters changes** are saved in the browser's `localStorage` (`seat-matrix-v1`, `masters-v1`). They survive a reload but are **not shared** between users or devices. To reset, use *Masters → Change log → Reset to source data*, or clear the site's storage.
-- **Manually entered figures** — budget allocations and the spend log (Budget & Outreach → Data entry), monthly platform figures and paid campaigns (Social Media → Data entry), partners (Partners Report) and admission targets (Grade-wise Reports → Edit targets, or Seat Matrix & Targets) — are saved in `localStorage` under `marketing-data-v1`. Until a session is first edited it shows generated starting data. Entry is open to the Location Admissions Head (own school) and Central Admin; targets to the Vertical Admissions Head and Central Admin.
+- **Manually entered figures** — budget allocations and the spend log with spend, activities and leads per month (Budget & Outreach → Data entry), monthly platform figures and paid campaigns (Social Media → Data entry) and admission targets (Grade-wise Reports → Edit targets, or Seat Matrix & Targets) — are saved in `localStorage` under `marketing-data-v1`. Until a session is first edited it shows generated starting data. Entry is open to the Location Admissions Head (own school) and Central Admin; targets to the Vertical Admissions Head and Central Admin.
 - The demo role is kept in `sessionStorage`.
 
 In production these would be replaced by an API backed by the synced SaaS, LeadSquared and FABS data.
@@ -120,7 +119,7 @@ lib/
   drilldown.ts       Drill-down hierarchy and records
   seat-matrix.ts     Seat Matrix store, cycles and CSV upload
   masters.ts         Master-data store, seeds and change log
-  marketing.ts       Entered budget, spend, social, partner and target data, plus report figures
+  marketing.ts       Entered budget, spend, social and target data, plus report figures
   context.tsx        App state: role, filters, seat and master stores
   roles.ts           Roles and permission matrix
   reports.ts         Report definitions used by exports

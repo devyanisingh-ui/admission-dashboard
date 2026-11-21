@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import {
-  Bell, BarChart3, CalendarDays, Network, Database, Download, GitMerge, Handshake, LayoutDashboard, Menu,
+  Bell, BarChart3, CalendarDays, Network, Database, Download, LayoutDashboard, Menu,
   Settings2, Share2, SlidersHorizontal, Table2, UserMinus, Wallet, X,
 } from "lucide-react";
 import Link from "next/link";
@@ -10,12 +10,12 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { clampSpan, cycleBounds, DATE_RANGES, fmtDate, rangeLabelOf, spanDays, useApp, type DateRange, type DateSpan } from "@/lib/context";
 import {
-  buildAlerts, CYCLES, mappingQueue, schoolGrades, SOURCE_GROUPS, SYNC_STATUS, type Board, type Cycle, type SourceGroup, type Vertical,
+  buildAlerts, CYCLES, schoolGrades, SOURCE_GROUPS, SYNC_STATUS, type Board, type Cycle, type SourceGroup, type Vertical,
 } from "@/lib/data";
 import { ROLES, type Permission, type RoleId } from "@/lib/roles";
 import { Dropdown } from "./dropdown";
 
-interface NavItem { href: string; label: string; icon: typeof Bell; perm: Permission; badge?: "mapping" | "alerts" }
+interface NavItem { href: string; label: string; icon: typeof Bell; perm: Permission; badge?: "alerts" }
 const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Dashboard",
@@ -26,14 +26,12 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { href: "/budget", label: "Budget & Outreach", icon: Wallet, perm: "view.marketing" },
       { href: "/social", label: "Social Media Reports", icon: Share2, perm: "view.marketing" },
       { href: "/strength", label: "Withdrawals", icon: UserMinus, perm: "view.location" },
-      { href: "/partners", label: "Partners Report", icon: Handshake, perm: "view.marketing" },
       { href: "/reports", label: "Download Centre", icon: Download, perm: "view.reports" },
     ],
   },
   {
     group: "Operations",
     items: [
-      { href: "/mapping", label: "Admission Mapping", icon: GitMerge, perm: "view.mapping", badge: "mapping" },
       { href: "/systems", label: "System Views", icon: Database, perm: "view.systems" },
       { href: "/alerts", label: "Alerts", icon: Bell, perm: "view.location", badge: "alerts" },
     ],
@@ -57,9 +55,8 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const counts = useMemo(() => {
     const ids = app.allowedLocations.map((l) => l.id);
-    const mapping = ids.flatMap((id) => mappingQueue(id)).filter((m) => m.state === "suggested" || m.state === "unmatched").length;
     const alerts = buildAlerts(app.cycle).filter((a) => !a.locationId || ids.includes(a.locationId)).length;
-    return { mapping, alerts };
+    return { alerts };
   }, [app.allowedLocations, app.cycle]);
 
   const initials = app.userName.replace(/^(Dr\.|Prof\.)\s*/, "").split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();

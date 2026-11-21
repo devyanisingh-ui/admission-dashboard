@@ -35,9 +35,6 @@ export type Permission =
   | "view.marketing"
   | "view.location"
   | "view.systems"
-  | "view.mapping"
-  | "mapping.act"
-  | "mapping.override"
   | "view.planning"
   | "seat.edit"
   | "seat.requestChange"
@@ -71,9 +68,6 @@ export const DEFAULT_MATRIX: PermissionMatrix = {
   "view.marketing": ["locHead", "principal", "verticalHead", "leadership", "centralAdmin"],
   "view.location": ALL_BUT_SYS,
   "view.systems": ALL_BUT_SYS,
-  "view.mapping": ["counsellor", "locHead", "principal", "verticalHead", "centralAdmin"],
-  "mapping.act": ["counsellor", "locHead", "centralAdmin"],
-  "mapping.override": ["locHead", "verticalHead", "centralAdmin"],
   "view.planning": ["locHead", "principal", "verticalHead", "leadership", "centralAdmin"],
   "seat.edit": ["locHead", "centralAdmin"],
   "seat.requestChange": ["locHead"],
@@ -104,7 +98,7 @@ export const can = (role: RoleId, p: Permission, matrix: PermissionMatrix = DEFA
 /* Permission catalogue                                                */
 /* ------------------------------------------------------------------ */
 
-export type PermissionGroup = "Dashboards & reports" | "Admission mapping" | "Seat Matrix & targets" | "Marketing data" | "Masters" | "Data & privacy" | "Administration";
+export type PermissionGroup = "Dashboards & reports" | "Seat Matrix & targets" | "Marketing data" | "Masters" | "Data & privacy" | "Administration";
 
 export interface PermissionDef {
   id: Permission;
@@ -119,19 +113,15 @@ export interface PermissionDef {
   sensitive?: boolean;
 }
 
-export const PERMISSION_GROUPS: PermissionGroup[] = ["Dashboards & reports", "Admission mapping", "Seat Matrix & targets", "Marketing data", "Masters", "Data & privacy", "Administration"];
+export const PERMISSION_GROUPS: PermissionGroup[] = ["Dashboards & reports", "Seat Matrix & targets", "Marketing data", "Masters", "Data & privacy", "Administration"];
 
 export const PERMISSIONS: PermissionDef[] = [
   { id: "view.location", group: "Dashboards & reports", label: "View location dashboards", description: "Dashboard, Drill-down, Grade-wise reports, Withdrawals and Alerts for the role's own scope" },
   { id: "view.group", group: "Dashboards & reports", label: "View group performance", description: "Cross-location comparison, segment view and the school leaderboard", requires: ["view.location"] },
-  { id: "view.marketing", group: "Dashboards & reports", label: "View marketing reports", description: "Budget & Outreach, Social Media and Partners reports" },
+  { id: "view.marketing", group: "Dashboards & reports", label: "View marketing reports", description: "Budget & Outreach and Social Media reports" },
   { id: "view.systems", group: "Dashboards & reports", label: "View source-system data", description: "System Views: records as held in LeadSquared, SaaS and FABS" },
   { id: "view.reports", group: "Dashboards & reports", label: "Open the Download Centre", description: "Standard report packs for the role's scope" },
   { id: "export", group: "Dashboards & reports", label: "Export to CSV / Excel", description: "Download buttons on tables and widgets across the dashboard" },
-
-  { id: "view.mapping", group: "Admission mapping", label: "View admission mapping", description: "The FABS admission ↔ CRM lead mapping queue" },
-  { id: "mapping.act", group: "Admission mapping", label: "Confirm or mark mappings", description: "Confirm suggested links, link manually, mark direct admissions", requires: ["view.mapping"] },
-  { id: "mapping.override", group: "Admission mapping", label: "Override a confirmed mapping", description: "Re-link an admission that someone else already confirmed", requires: ["view.mapping"] },
 
   { id: "view.planning", group: "Seat Matrix & targets", label: "View Seat Matrix & targets", description: "Seat Matrix, admission targets and their change history" },
   { id: "seat.edit", group: "Seat Matrix & targets", label: "Create and edit Seat Matrix", description: "Create, edit, add/remove rows and delete matrices while a cycle is in setup", requires: ["view.planning"] },

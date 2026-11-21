@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { AlertTriangle, Award, ClipboardList, GraduationCap, IndianRupee, PiggyBank, Target, Users, Wallet } from "lucide-react";
+import { AlertTriangle, Award, ClipboardList, IndianRupee, PiggyBank, Target, Users, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Panel, SnapshotCard, SOURCE_COLORS } from "@/components/dashboard-widgets";
@@ -32,24 +32,25 @@ function Budget() {
   const t = useMemo(() => outreachTotals(ids, cycle), [key]);
   const monthly = useMemo(() => outreachMonthly(ids, cycle), [key]);
   const bySchool = useMemo(
-    () => filteredLocations.map((l) => ({ loc: l, ...outreachTotals([l.id], cycle) })).sort((a, b) => a.cpa - b.cpa),
+    () => filteredLocations.map((l) => ({ loc: l, ...outreachTotals([l.id], cycle) })).sort((a, b) => (a.leads ? a.cpl : Infinity) - (b.leads ? b.cpl : Infinity)),
     [key],
   );
   const util = pct(t.spent, t.allocated);
-  const withAdm = rows.filter((r) => r.admissions);
-  const best = withAdm.reduce((a, r) => (r.cpa < a.cpa ? r : a), withAdm[0]);
-  const worst = withAdm.reduce((a, r) => (r.cpa > a.cpa ? r : a), withAdm[0]);
+  // Channel efficiency is judged on cost per lead.
+  const withLeads = rows.filter((r) => r.leads && r.spent);
+  const best = withLeads.reduce((a, r) => (r.cpl < a.cpl ? r : a), withLeads[0]);
+  const worst = withLeads.reduce((a, r) => (r.cpl > a.cpl ? r : a), withLeads[0]);
   const over = rows.filter((r) => r.spent > r.allocated);
 
   return (
     <>
       <PageHeader
         title="Budget & Outreach"
-        subtitle={`Budget, spend, leads and admissions are entered by hand in Data entry · session ${cycle.replace("-", "–")}`}
+        subtitle={`Budget, spend, activities and leads are entered by hand · session ${cycle.replace("-", "–")}`}
         actions={
           <ExportButtons
             name={`budget-outreach-${cycle}`}
-            rows={() => rows.map((r) => ({ Activity: r.type, "Allocated (₹)": r.allocated, "Spent (₹)": r.spent, "Utilised %": pct(r.spent, r.allocated).toFixed(1), Activities: r.activities, Leads: r.leads, Admissions: r.admissions, "Cost per lead (₹)": Math.round(r.cpl), "Cost per admission (₹)": Math.round(r.cpa) }))}
+            rows={() => rows.map((r) => ({ Activity: r.type, "Allocated (₹)": r.allocated, "Spent (₹)": r.spent, "Utilised %": pct(r.spent, r.allocated).toFixed(1), Activities: r.activities, Leads: r.leads, "Cost per lead (₹)": Math.round(r.cpl) }))}
           />
         }
       />
@@ -69,16 +70,15 @@ function Budget() {
         <SnapshotCard theme="blue" icon={PiggyBank} label="Budget remaining" value={fmtINR(Math.max(0, t.allocated - t.spent))} change={null} sub={t.spent > t.allocated ? "Over budget" : "Available for the rest of the cycle"} />
         <SnapshotCard theme="violet" icon={ClipboardList} label="Activities run" value={t.activities} change={null} sub="Campaigns, fairs, activations, events" />
         <SnapshotCard theme="green" icon={Users} label="Leads generated" value={t.leads} change={null} sub={`Cost per lead ${fmtINR(t.cpl)}`} />
-        <SnapshotCard theme="rose" icon={GraduationCap} label="Admissions" value={t.admissions} change={null} sub={`Cost per admission ${fmtINR(t.cpa)}`} />
       </div>
 
       {/* Highlights */}
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         {best && (
-          <Highlight icon={Award} tone="green" title="Most efficient channel" value={best.type} detail={`${fmtINR(best.cpa)} per admission · ${fmt(best.admissions)} admissions`} />
+          <Highlight icon={Award} tone="green" title="Most efficient channel" value={best.type} detail={`${fmtINR(best.cpl)} per lead · ${fmt(best.leads)} leads`} />
         )}
         {worst && worst !== best && (
-          <Highlight icon={Target} tone="amber" title="Costliest per admission" value={worst.type} detail={`${fmtINR(worst.cpa)} per admission — ${(worst.cpa / best.cpa).toFixed(1)}× the most efficient`} />
+          <Highlight icon={Target} tone="amber" title="Costliest per lead" value={worst.type} detail={`${fmtINR(worst.cpl)} per lead — ${(worst.cpl / best.cpl).toFixed(1)}× the most efficient`} />
         )}
         <Highlight
           icon={AlertTriangle}
@@ -117,12 +117,7 @@ function Budget() {
         </Panel>
       </div>
 
-      <Panel
-        className="mt-4"
-        title="Outcomes by activity"
-        sub="spend, activities, leads and admissions as entered in Data entry → Spend & outcomes log"
-        actions={can("marketing.edit") ? <button onClick={() => setTab("entry")} className="rounded-md px-2.5 py-1 text-xs font-semibold text-brand-700 ring-1 ring-brand-200 hover:bg-brand-50">Enter data</button> : undefined}
-      >
+      <Panel className="mt-4" title="Outcomes by activity" sub="spend, activities and leads entered in the Spend log">
         <div className="overflow-x-auto scroll-thin">
           <table className="w-full text-sm tabular">
             <thead>
@@ -131,17 +126,14 @@ function Budget() {
                 <th className="px-3 py-2 text-right font-medium">Spent</th>
                 <th className="px-3 py-2 text-right font-medium">Activities</th>
                 <th className="px-3 py-2 text-right font-medium">Leads</th>
-                <th className="px-3 py-2 text-right font-medium">Admissions</th>
-                <th className="px-3 py-2 text-right font-medium">Conv.</th>
-                <th className="px-3 py-2 text-left font-medium">Share of spend vs admissions</th>
+                <th className="px-3 py-2 text-left font-medium">Share of spend vs leads</th>
                 <th className="px-3 py-2 text-right font-medium">Cost / lead</th>
-                <th className="px-3 py-2 text-right font-medium">Cost / admission</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((r) => {
                 const spendShare = pct(r.spent, t.spent);
-                const admShare = pct(r.admissions, t.admissions);
+                const leadShare = pct(r.leads, t.leads);
                 return (
                   <tr key={r.type} className="hover:bg-slate-50">
                     <td className="px-3 py-2">
@@ -151,41 +143,35 @@ function Budget() {
                       </div>
                       <div className="pl-[18px] text-[11px] text-slate-400">{r.group} leads</div>
                     </td>
-                    <td className="px-3 py-2 text-right font-semibold">{fmtINR(r.spent)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">{fmtINR(r.spent)}</td>
                     <td className="px-3 py-2 text-right">{r.activities} <span className="text-[11px] text-slate-400">{r.unit}</span></td>
                     <td className="px-3 py-2 text-right">{fmt(r.leads)}</td>
-                    <td className="px-3 py-2 text-right">{fmt(r.admissions)}</td>
-                    <td className="px-3 py-2 text-right">{pct(r.admissions, r.leads).toFixed(1)}%</td>
                     <td className="px-3 py-2">
-                      <ShareBars spend={spendShare} adm={admShare} />
+                      <ShareBars spend={spendShare} leads={leadShare} />
                     </td>
-                    <td className="px-3 py-2 text-right">{fmtINR(r.cpl)}</td>
-                    <td className={clsx("px-3 py-2 text-right", r === best ? "font-semibold text-emerald-700" : r === worst ? "font-semibold text-rose-600" : "")}>{fmtINR(r.cpa)}</td>
+                    <td className={clsx("px-3 py-2 text-right", r === best ? "font-semibold text-emerald-700" : r === worst ? "font-semibold text-rose-600" : "")}>{r.leads ? fmtINR(r.cpl) : "—"}</td>
                   </tr>
                 );
               })}
               <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
                 <td className="px-3 py-2">Total</td>
-                <td className="px-3 py-2 text-right">{fmtINR(t.spent)}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-right">{fmtINR(t.spent)}</td>
                 <td className="px-3 py-2 text-right">{t.activities}</td>
                 <td className="px-3 py-2 text-right">{fmt(t.leads)}</td>
-                <td className="px-3 py-2 text-right">{fmt(t.admissions)}</td>
-                <td className="px-3 py-2 text-right">{pct(t.admissions, t.leads).toFixed(1)}%</td>
                 <td className="px-3 py-2" />
                 <td className="px-3 py-2 text-right">{fmtINR(t.cpl)}</td>
-                <td className="px-3 py-2 text-right">{fmtINR(t.cpa)}</td>
               </tr>
             </tbody>
           </table>
         </div>
         <p className="mt-2 text-[11px] text-slate-500">
-          Share bars: <span className="font-medium text-orange-600">spend</span> vs <span className="font-medium text-emerald-600">admissions</span> — a longer green bar means the channel brings more than its share of admissions.
-          Green / red cost = cheapest / costliest per admission.
+          Share bars: <span className="font-medium text-orange-600">spend</span> vs <span className="font-medium text-emerald-600">leads</span> — a longer green bar means the channel brings more than its share of leads.
+          Green / red cost = cheapest / costliest per lead.
         </p>
       </Panel>
 
       {bySchool.length > 1 && (
-        <Panel className="mt-4" title="By school" sub="sorted by cost per admission, lowest first">
+        <Panel className="mt-4" title="By school" sub="sorted by cost per lead, lowest first">
           <div className="overflow-x-auto scroll-thin">
             <table className="w-full text-sm tabular">
               <thead>
@@ -195,9 +181,7 @@ function Budget() {
                   <th className="px-3 py-2 text-right font-medium">Spent</th>
                   <th className="px-3 py-2 text-left font-medium">Utilised</th>
                   <th className="px-3 py-2 text-right font-medium">Leads</th>
-                  <th className="px-3 py-2 text-right font-medium">Admissions</th>
                   <th className="px-3 py-2 text-right font-medium">Cost / lead</th>
-                  <th className="px-3 py-2 text-right font-medium">Cost / admission</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -213,9 +197,7 @@ function Budget() {
                       <td className="px-3 py-2 text-right">{fmtINR(s.spent)}</td>
                       <td className="px-3 py-2"><UtilBar value={u} /></td>
                       <td className="px-3 py-2 text-right">{fmt(s.leads)}</td>
-                      <td className="px-3 py-2 text-right">{fmt(s.admissions)}</td>
-                      <td className="px-3 py-2 text-right">{fmtINR(s.cpl)}</td>
-                      <td className={clsx("px-3 py-2 text-right font-semibold", i === 0 && "text-emerald-700", i === bySchool.length - 1 && "text-rose-600")}>{fmtINR(s.cpa)}</td>
+                      <td className={clsx("px-3 py-2 text-right font-semibold", i === 0 && "text-emerald-700", i === bySchool.length - 1 && "text-rose-600")}>{s.leads ? fmtINR(s.cpl) : "—"}</td>
                     </tr>
                   );
                 })}
@@ -276,7 +258,7 @@ function UtilisationRow({ r }: { r: OutreachRow }) {
   );
 }
 
-function ShareBars({ spend, adm }: { spend: number; adm: number }) {
+function ShareBars({ spend, leads }: { spend: number; leads: number }) {
   const max = 40;
   return (
     <div className="w-44 space-y-0.5 text-[10px] tabular">
@@ -285,8 +267,8 @@ function ShareBars({ spend, adm }: { spend: number; adm: number }) {
         <span className="w-8 text-right text-slate-500">{spend.toFixed(0)}%</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, (adm / max) * 100)}%` }} /></div>
-        <span className={clsx("w-8 text-right", adm > spend ? "font-semibold text-emerald-700" : "text-slate-500")}>{adm.toFixed(0)}%</span>
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, (leads / max) * 100)}%` }} /></div>
+        <span className={clsx("w-8 text-right", leads > spend ? "font-semibold text-emerald-700" : "text-slate-500")}>{leads.toFixed(0)}%</span>
       </div>
     </div>
   );

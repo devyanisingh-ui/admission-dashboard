@@ -3,8 +3,8 @@
  *
  * These figures are entered by hand in the dashboard (Data entry tabs) and saved in the
  * marketing store. Until a cycle is first edited, it shows starting data generated below.
- * Outreach outcomes (leads and admissions per activity) are entered with each month's spend;
- * the starting data seeds them from the LeadSquared / FABS source-group split.
+ * Leads per outreach activity are entered with each spend entry; admissions per activity
+ * (used only for the dashboard leaderboard's cost per admission) still come from FABS.
  */
 import {
   CYCLE_MONTHS, SEED_LOCATIONS, locationTotals, rng, SOURCE_GROUP_OF, SOURCE_GROUP_SHARE, SOURCE_GROUPS, sourceBreakdown, totalsFor,
@@ -31,7 +31,6 @@ const BUDGET_MIX = [0.3, 0.16, 0.14, 0.16, 0.08, 0.16];
 /** How an annual allocation is planned across the cycle (Oct → Sep). */
 export const PLAN_SHAPE = [0.1, 0.14, 0.15, 0.14, 0.12, 0.1, 0.08, 0.06, 0.04, 0.03, 0.02, 0.02];
 const SOCIAL_SHAPE = [0.07, 0.11, 0.13, 0.14, 0.13, 0.11, 0.09, 0.07, 0.05, 0.04, 0.03, 0.03];
-const PARTNER_SHAPE = [0.06, 0.12, 0.15, 0.16, 0.14, 0.11, 0.09, 0.07, 0.04, 0.03, 0.02, 0.01];
 
 export const SOCIAL_PLATFORMS = ["Instagram", "Facebook", "YouTube", "LinkedIn", "Google Business"] as const;
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
@@ -50,11 +49,8 @@ const SOCIAL_SHARE_OF_DIGITAL = 0.45;
 export interface Stamp { updatedAt: string; updatedBy: string; /** ms since epoch of the last edit; 0 for starting data. */ ts?: number }
 /** Annual budget for one outreach activity at one location. */
 export interface BudgetRec extends Stamp { id: string; locationId: string; activity: string; allocated: number }
-/** A spend entry: money spent, activities run, and the leads and admissions they brought, for one activity in one month. */
-export interface SpendRec extends Stamp {
-  id: string; locationId: string; activity: string; month: string; amount: number; count: number; note: string;
-  leads: number; admissions: number;
-}
+/** A spend entry: money spent, activities run and leads generated for one activity in one month. */
+export interface SpendRec extends Stamp { id: string; locationId: string; activity: string; month: string; amount: number; count: number; leads: number; note: string }
 /** Monthly figures for one social platform at one location (from the platform's insights export). */
 export interface SocialRec extends Stamp {
   id: string; locationId: string; platform: SocialPlatform; month: string;
@@ -88,7 +84,14 @@ export function reviveMarketing(raw: unknown): MarketingStore | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Partial<MarketingStore>;
   if (typeof r.cycles !== "object" || typeof r.targets !== "object" || !Array.isArray(r.log)) return null;
-  return { cycles: r.cycles ?? {}, targets: r.targets ?? {}, log: r.log };
+  const cycles = { ...(r.cycles ?? {}) } as Partial<Record<Cycle, CycleData>>;
+  for (const c of Object.keys(cycles) as Cycle[]) {
+    const d = cycles[c];
+    if (!d || d.spend.every((x) => typeof x.leads === "number")) continue;
+    const seeded = new Map(seedCycle(c).spend.map((x) => [x.id, x.leads]));
+    cycles[c] = { ...d, spend: d.spend.map((x) => (typeof x.leads === "number" ? x : { ...x, leads: seeded.get(x.id) ?? 0 })) };
+  }
+  return { cycles, targets: r.targets ?? {}, log: r.log };
 }
 
 export const newEntryId = (prefix: string) => `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -102,23 +105,7 @@ export function setMarketingData(store: MarketingStore) {
 
 /** Records for a cycle — entered data if the cycle has been edited, otherwise its starting data. */
 export function cycleData(cycle: Cycle, store: MarketingStore = current): CycleData {
-  const saved = store.cycles[cycle];
-  return saved ? withOutcomes(cycle, saved) : seedCycle(cycle);
-}
-
-/**
- * Spend entries saved before leads and admissions were entered by hand have neither field:
- * they take the starting figures for the same entry (or 0 for entries added later).
- */
-const migrated = new WeakMap<CycleData, CycleData>();
-function withOutcomes(cycle: Cycle, d: CycleData): CycleData {
-  if (d.spend.every((x) => typeof x.leads === "number" && typeof x.admissions === "number")) return d;
-  const hit = migrated.get(d);
-  if (hit) return hit;
-  const seed = new Map(seedCycle(cycle).spend.map((x) => [x.id, x]));
-  const out = { ...d, spend: d.spend.map((x) => (typeof x.leads === "number" && typeof x.admissions === "number" ? x : { ...x, leads: x.leads ?? seed.get(x.id)?.leads ?? 0, admissions: x.admissions ?? seed.get(x.id)?.admissions ?? 0 })) };
-  migrated.set(d, out);
-  return out;
+  return store.cycles[cycle] ?? seedCycle(cycle);
 }
 
 /** Whether a cycle still shows the starting data (nothing entered yet). */
@@ -190,8 +177,7 @@ function seedCycle(cycle: Cycle): CycleData {
     const r0 = rng("budget" + id + cycle);
     const annual = Math.round((loc.vertical === "Schools" ? between(r0, 18, 30) : between(r0, 45, 80)) * 100000);
     let digitalSpent = 0;
-    // Starting outcomes per activity: the location's leads and matched admissions split by source group.
-    const outcomes = groupOutcomes([id], cycle);
+    const startLeads = groupOutcomes([id], cycle);
     OUTREACH_ACTIVITIES.forEach((a, i) => {
       const r = rng("act" + id + cycle + a.type);
       const allocated = Math.round(annual * BUDGET_MIX[i]);
@@ -201,15 +187,10 @@ function seedCycle(cycle: Cycle): CycleData {
       data.budgets.push({ id: `b-${cycle}-${id}-${i}`, locationId: id, activity: a.type, allocated, ...SEED_STAMP });
       const amounts = splitExact(spent, PLAN_SHAPE.map((s) => s * between(r, 0.8, 1.2)));
       const counts = splitExact(count, PLAN_SHAPE);
-      const leads = splitExact(outcomes[a.group].leads, PLAN_SHAPE);
-      // Admissions trail leads by about a month.
-      const adm = splitExact(outcomes[a.group].admissions, PLAN_SHAPE.map((_, m) => PLAN_SHAPE[Math.max(0, m - 1)]));
+      const leads = splitExact(startLeads[a.group].leads, amounts.some(Boolean) ? amounts : PLAN_SHAPE);
       CYCLE_MONTHS.forEach((month, m) => {
-        if (!amounts[m] && !counts[m] && !leads[m] && !adm[m]) return;
-        data.spend.push({
-          id: `s-${cycle}-${id}-${i}-${m}`, locationId: id, activity: a.type, month, amount: amounts[m], count: counts[m], note: "",
-          leads: leads[m], admissions: adm[m], ...SEED_STAMP,
-        });
+        if (!amounts[m] && !counts[m] && !leads[m]) return;
+        data.spend.push({ id: `s-${cycle}-${id}-${i}-${m}`, locationId: id, activity: a.type, month, amount: amounts[m], count: counts[m], leads: leads[m], note: "", ...SEED_STAMP });
       });
     });
 
@@ -291,8 +272,8 @@ export interface OutreachRow {
 }
 
 /**
- * Leads and matched admissions per source group — the same split the Dashboard's Source-wise widget uses.
- * Only seeds the starting data; after that, outcomes are whatever was entered.
+ * Leads and matched admissions per source group — the same split the Dashboard's Source-wise widget uses,
+ * so each outreach activity's outcomes match it exactly.
  */
 function groupOutcomes(locIds: string[], cycle: Cycle) {
   const t = totalsFor(locIds, cycle);
@@ -303,18 +284,19 @@ function groupOutcomes(locIds: string[], cycle: Cycle) {
   return Object.fromEntries(SOURCE_GROUPS.map((g, i) => [g, { leads: leads[i], admissions: adm[i] }])) as Record<SourceGroup, { leads: number; admissions: number }>;
 }
 
-/** Budget, spend, activities, leads and admissions by activity type for the selected locations — all entered by hand. */
+/** Budget, spend, activities and leads (all entered) by activity type; admissions (FABS) only feed cost per admission. */
 export function outreachByActivity(locIds: string[], cycle: Cycle): OutreachRow[] {
   const d = cycleData(cycle);
   const budgets = inLocs(d.budgets, locIds);
   const spend = inLocs(d.spend, locIds);
+  const outcomes = groupOutcomes(locIds, cycle);
   return OUTREACH_ACTIVITIES.map((a) => {
     const allocated = budgets.filter((b) => b.activity === a.type).reduce((s, b) => s + b.allocated, 0);
     const mine = spend.filter((x) => x.activity === a.type);
     const spent = mine.reduce((s, x) => s + x.amount, 0);
     const activities = mine.reduce((s, x) => s + x.count, 0);
-    const leads = mine.reduce((s, x) => s + x.leads, 0);
-    const admissions = mine.reduce((s, x) => s + x.admissions, 0);
+    const leads = mine.reduce((s, x) => s + (x.leads ?? 0), 0);
+    const { admissions } = outcomes[a.group];
     return { ...a, allocated, spent, activities, leads, admissions, cpl: leads ? spent / leads : 0, cpa: admissions ? spent / admissions : 0 };
   });
 }
@@ -374,28 +356,3 @@ export function socialCampaigns(locIds: string[], cycle: Cycle) {
 export function socialSpend(locIds: string[], cycle: Cycle) {
   return inLocs(cycleData(cycle).campaigns, locIds).reduce((s, c) => s + c.spend, 0);
 }
-
-/* ------------------------------------------------------------------ */
-/* Partners                                                            */
-/* ------------------------------------------------------------------ */
-
-export interface Partner extends PartnerRec { conversion: number }
-
-export function partnersFor(locIds: string[], cycle: Cycle): Partner[] {
-  return inLocs(cycleData(cycle).partners, locIds).map((p) => ({ ...p, conversion: p.leadsShared ? (p.admissions / p.leadsShared) * 100 : 0 }));
-}
-
-/** Month-by-month leads shared and admissions for a set of partners (cycle Oct → Sep), spread from their cycle totals. */
-export function partnerMonthly(partners: Partner[]) {
-  return CYCLE_MONTHS.map((month, i) => {
-    const row: { month: string; admissions: number } & Record<PartnerType, number> = {
-      month, admissions: 0, Preschool: 0, Crèche: 0, Corporate: 0, RWA: 0,
-    };
-    for (const t of PARTNER_TYPES) row[t] = Math.round(partners.filter((p) => p.type === t).reduce((s, p) => s + p.leadsShared, 0) * PARTNER_SHAPE[i]);
-    row.admissions = Math.round(partners.reduce((s, p) => s + p.admissions, 0) * PARTNER_SHAPE[Math.max(0, i - 1)]);
-    return row;
-  });
-}
-
-/** Cost per admission for a location (used in the leaderboard). */
-export const costPerAdmission = (locId: string, cycle: Cycle) => outreachTotals([locId], cycle).cpa;

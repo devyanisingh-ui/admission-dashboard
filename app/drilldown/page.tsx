@@ -585,7 +585,7 @@ function RecordsView({ stats, st, scope }: { stats: NodeStats; st: ReturnType<ty
     ? [
         { k: "Admissions", v: fmt(all.length), sub: "fee paid in FABS" },
         { k: "Linked to a lead", v: fmt(linked), sub: `${all.length ? ((linked / all.length) * 100).toFixed(0) : 0}% matched in LeadSquared` },
-        { k: "Unmapped", v: fmt(countLink("Unmapped")), sub: "awaiting the Mapping queue", warn: countLink("Unmapped") > 0 },
+        { k: "Unmapped", v: fmt(countLink("Unmapped")), sub: "not yet linked to a lead", warn: countLink("Unmapped") > 0 },
         { k: "Direct admissions", v: fmt(countLink("Direct admission")), sub: "no LeadSquared lead" },
       ]
     : [

@@ -948,7 +948,7 @@ export function buildAlerts(cycle: Cycle): Alert[] {
       out.push({ id: "co" + loc.id + u.unit, severity: "low", type: "Grade close-out", title: `${loc.short} · ${u.unit}: ${u.seats - (u.enrolled - u.withdrawnNew)} seats left`, detail: `Fewer than 10% of seats for new admission remain.`, locationId: loc.id, raised: "17 Nov, 06:00", audience: "Location Head, Principal" });
     const unm = mappingQueue(loc.id).filter((m) => (m.state === "suggested" || m.state === "unmatched") && m.fabs.hoursSinceEntry > 48).length;
     if (unm)
-      out.push({ id: "um" + loc.id, severity: "medium", type: "Unmapped > 48h", title: `${loc.short}: ${unm} FABS admissions unmapped for over 48 hours`, detail: "Link them to LeadSquared leads or mark as Direct admission in the Mapping Queue.", locationId: loc.id, raised: "17 Nov, 10:00", audience: "Counsellors, Location Head" });
+      out.push({ id: "um" + loc.id, severity: "medium", type: "Unmapped > 48h", title: `${loc.short}: ${unm} FABS admissions unmapped for over 48 hours`, detail: "Link them to LeadSquared leads or mark them as Direct admission.", locationId: loc.id, raised: "17 Nov, 10:00", audience: "Counsellors, Location Head" });
   }
   out.push({ id: "src1", severity: "medium", type: "Source conversion drop", title: "Meta Ads conversion down 27% vs last month (Group)", detail: "Lead-to-admission conversion for Meta Ads fell from 2.6% to 1.9%.", raised: "17 Nov, 06:00", audience: "Vertical Heads, Group Leadership" });
   return out;
