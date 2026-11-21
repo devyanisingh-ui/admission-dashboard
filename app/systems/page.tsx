@@ -404,7 +404,7 @@ function FabsView({ locs, t }: { locs: Location[]; t: T }) {
         <SnapshotCard theme="rose" icon={UserMinus} label="Withdrawals" value={t.withdrawnNew + t.withdrawnExisting} change={null} sub={`${t.withdrawnNew} new · ${t.withdrawnExisting} existing`} />
       </div>
 
-      <div className="mt-4 grid items-start gap-4 xl:grid-cols-5">
+      <div className="mt-4 grid gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-3" title="FABS by location" subtitle="FABS location codes, resolved through the School Master" bodyClass="p-0">
           <Table head={["Location", "FABS code", "New admissions", "Active roster", "Withdrawals"]}>
             {byLoc.map((r) => (
