@@ -1,13 +1,13 @@
 "use client";
 
 import clsx from "clsx";
-import { AlertTriangle, Building2, CheckCircle2, ChevronDown, Database, FileText, GitMerge, GraduationCap, Hourglass, Link2, UserCheck, UserMinus, Users, UserX, Wallet } from "lucide-react";
+import { AlertTriangle, Building2, CheckCircle2, ChevronDown, Database, FileText, GraduationCap, Hourglass, Link2, UserCheck, UserMinus, Users, UserX, Wallet } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { SnapshotCard } from "@/components/dashboard-widgets";
 import { Badge, Card, Guard, Note, PageHeader, Pii, Table, Td, fmt } from "@/components/ui";
 import { useApp } from "@/lib/context";
 import {
-  crmSample, fabsSample, FUNNEL_STAGES, LOCATIONS, locationTotals, locationUnits, mappingQueue, saasSample, sourceBreakdown,
+  crmSample, fabsSample, FUNNEL_STAGES, LOCATIONS, locationTotals, locationUnits, saasSample, sourceBreakdown,
   STATUS_MAPPINGS, statusLeadCounts, SYNC_STATUS, totalsFor, type FunnelStage, type Location,
 } from "@/lib/data";
 
@@ -391,10 +391,9 @@ function FabsView({ locs, t }: { locs: Location[]; t: T }) {
   const byLoc = locs.map((l) => {
     const lt = locationTotals(l.id, cycle);
     const w = lt.withdrawnNew + lt.withdrawnExisting;
-    const open = mappingQueue(l.id).filter((m) => m.state === "suggested" || m.state === "unmatched").length;
-    return { loc: l, enrolled: lt.enrolled, roster: lt.continuing + lt.enrolled - w, w, unmapped: lt.unmapped, open };
+    return { loc: l, enrolled: lt.enrolled, roster: lt.continuing + lt.enrolled - w, w };
   });
-  const sum = (k: "enrolled" | "roster" | "w" | "unmapped") => byLoc.reduce((s, r) => s + r[k], 0);
+  const sum = (k: "enrolled" | "roster" | "w") => byLoc.reduce((s, r) => s + r[k], 0);
   const units = useMemo(() => topUnits(locs, cycle, "enrolled"), [ids.join(), cycle]);
 
   return (
@@ -403,12 +402,11 @@ function FabsView({ locs, t }: { locs: Location[]; t: T }) {
         <SnapshotCard theme="green" icon={GraduationCap} label="New admissions (fee paid)" value={t.enrolled} change={null} sub="Admission no. generated" />
         <SnapshotCard theme="blue" icon={Users} label="Active roster" value={strength} change={null} sub="Current strength" />
         <SnapshotCard theme="rose" icon={UserMinus} label="Withdrawals" value={t.withdrawnNew + t.withdrawnExisting} change={null} sub={`${t.withdrawnNew} new · ${t.withdrawnExisting} existing`} />
-        <SnapshotCard theme={t.unmapped ? "orange" : "green"} icon={GitMerge} label="Unmapped to LeadSquared" value={t.unmapped} change={null} sub="Not yet linked to a lead" />
       </div>
 
       <div className="mt-4 grid items-start gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-3" title="FABS by location" subtitle="FABS location codes, resolved through the School Master" bodyClass="p-0">
-          <Table head={["Location", "FABS code", "New admissions", "Active roster", "Withdrawals", "Unmapped to LeadSquared"]}>
+          <Table head={["Location", "FABS code", "New admissions", "Active roster", "Withdrawals"]}>
             {byLoc.map((r) => (
               <tr key={r.loc.id}>
                 <Td className="font-medium">{r.loc.short}</Td>
@@ -416,10 +414,9 @@ function FabsView({ locs, t }: { locs: Location[]; t: T }) {
                 <Td>{fmt(r.enrolled)}</Td>
                 <Td className="font-semibold">{fmt(r.roster)}</Td>
                 <Td className={r.w ? "text-rose-600" : "text-slate-400"}>{fmt(r.w)}</Td>
-                <Td>{r.unmapped ? <Badge tone="red">{r.unmapped}</Badge> : <span className="text-slate-400">0</span>}</Td>
               </tr>
             ))}
-            {byLoc.length > 1 && <TotalRow cells={["All", "", fmt(sum("enrolled")), fmt(sum("roster")), fmt(sum("w")), fmt(sum("unmapped"))]} />}
+            {byLoc.length > 1 && <TotalRow cells={["All", "", fmt(sum("enrolled")), fmt(sum("roster")), fmt(sum("w"))]} />}
           </Table>
         </Card>
         <Card className="xl:col-span-2" title="Top grades & programmes" subtitle="By new admissions (fee paid)">
@@ -444,10 +441,7 @@ function FabsView({ locs, t }: { locs: Location[]; t: T }) {
         </Table>
       </Card>
       <div className="mt-3">
-        <Note>
-          FABS has no LeadSquared lead ID — each new admission has to be linked to its lead. Admission category (EWS/DG) and refund status are pending
-          confirmation (open item #7).
-        </Note>
+        <Note>Admission category (EWS/DG) and refund status are pending confirmation (open item #7).</Note>
       </div>
     </>
   );
