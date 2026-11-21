@@ -9,7 +9,7 @@ import { Badge, Button, Card } from "@/components/ui";
 import { useApp } from "@/lib/context";
 import { SOURCE_GROUPS, type SourceGroup } from "@/lib/data";
 import { downloadCsv } from "@/lib/export";
-import { describeChanges, newId, REASON_SCOPES, type AuditAction, type MasterKey, type ReasonRec, type SourceRec } from "@/lib/masters";
+import { describeChanges, newId, REASON_SCOPES, type ActivityRec, type AuditAction, type MasterKey, type ReasonRec, type SourceRec } from "@/lib/masters";
 import { EditBadge, EmptyRow, sameText, tdc, thL, thR, useListFilter, type TabProps } from "./shared";
 
 type Confirm = { kind: "delete" | "deactivate"; id: string } | null;
@@ -225,13 +225,134 @@ function ReasonEditor({ row, all, onClose, onSave }: { row: ReasonRec | null; al
 }
 
 /* ------------------------------------------------------------------ */
+/* Outreach activities                                                 */
+/* ------------------------------------------------------------------ */
+
+export function ActivitiesTab({ store, commit }: TabProps) {
+  const { can, marketing, setMarketing } = useApp();
+  const canEdit = can("locationMaster.edit");
+  const f = useListFilter(store.activities, (a) => `${a.name} ${a.group} ${a.unit}`);
+  const [editing, setEditing] = useState<ActivityRec | "new" | null>(null);
+  const [confirm, setConfirm] = useState<Confirm>(null);
+  const target = confirm ? store.activities.find((s) => s.id === confirm.id) : undefined;
+  // Activities with budgets or spend entered against them can't be deleted.
+  const used = new Set(Object.values(marketing.cycles).flatMap((d) => [...(d?.budgets ?? []), ...(d?.spend ?? [])].map((r) => r.activity)));
+  const inUse = (a: ActivityRec) => !a.custom || used.has(a.name);
+
+  const save = (next: ActivityRec, before: ActivityRec | null) => {
+    commit((s) => ({ ...s, activities: before ? s.activities.map((x) => (x.id === before.id ? next : x)) : [...s.activities, next] }), {
+      master: "Outreach activity", action: before ? "Updated" : "Created", record: next.name,
+      detail: before ? describeChanges(before, next, { name: "Name", group: "Reporting group", unit: "Counted as" }) : `Reporting group ${next.group} · counted as ${next.unit}`,
+    });
+    // Entered budgets and spend follow a rename.
+    if (before && before.name !== next.name) {
+      const rename = <T extends { activity: string }>(r: T): T => (r.activity === before.name ? { ...r, activity: next.name } : r);
+      setMarketing((m) => ({
+        ...m,
+        cycles: Object.fromEntries(Object.entries(m.cycles).map(([c, d]) => [c, d && { ...d, budgets: d.budgets.map(rename), spend: d.spend.map(rename) }])),
+      }));
+    }
+    setEditing(null);
+  };
+  const setActive = (r: ActivityRec, active: boolean) =>
+    commit((s) => ({ ...s, activities: s.activities.map((x) => (x.id === r.id ? { ...x, active } : x)) }), {
+      master: "Outreach activity", action: active ? "Reactivated" : "Deactivated", record: r.name,
+      detail: active ? "Offered again for budgets and spend" : "No longer offered for new budgets and spend; entered figures still count",
+    });
+  const remove = (r: ActivityRec) =>
+    commit((s) => ({ ...s, activities: s.activities.filter((x) => x.id !== r.id) }), { master: "Outreach activity", action: "Deleted", record: r.name, detail: "Had no budgets or spend" });
+
+  return (
+    <>
+      <MasterToolbar
+        q={f.q} setQ={f.setQ} placeholder="Search activity, group or unit"
+        showInactive={f.showInactive} setShowInactive={f.setShowInactive} inactiveCount={f.inactiveCount}
+        canEdit={canEdit} onAdd={() => setEditing("new")} addLabel="Add activity"
+      />
+      <Card title="Outreach activities" subtitle="Activities that budgets and spend are entered against in Budget & Outreach · each feeds one lead-source reporting group" bodyClass="p-0" actions={canEdit ? undefined : <EditBadge editable={false} />}>
+        <div className="relative overflow-x-auto scroll-thin">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50/70">
+                <th className={thL}>Activity</th>
+                <th className={thL}>Reporting group</th>
+                <th className={thL}>Counted as</th>
+                <th className={thL}>Status</th>
+                <th className={thR}><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {f.visible.map((a) => (
+                <tr key={a.id} className={clsx("hover:bg-slate-50/70", !a.active && "bg-slate-50/60 text-slate-400")}>
+                  <td className={clsx(tdc, "font-medium text-slate-900")}><span className="inline-flex items-center gap-1.5">{a.name}{a.custom && <NewBadge />}</span></td>
+                  <td className={tdc}><span className={clsx("rounded-md px-2 py-0.5 text-xs font-medium", GROUP_TONE[a.group])}>{a.group}</span></td>
+                  <td className={clsx(tdc, "text-slate-600")}>{a.unit}</td>
+                  <td className={tdc}><ActiveBadge active={a.active} /></td>
+                  <td className={tdc}>
+                    <RowActions
+                      canEdit={canEdit} active={a.active} inUse={inUse(a)} label={a.name} inUseReason="Budgets or spend are entered against this activity"
+                      onEdit={() => setEditing(a)} onDelete={() => setConfirm({ kind: "delete", id: a.id })}
+                      onToggleActive={() => (a.active ? setConfirm({ kind: "deactivate", id: a.id }) : setActive(a, true))}
+                    />
+                  </td>
+                </tr>
+              ))}
+              {!f.visible.length && <EmptyRow cols={5}>No activities match.</EmptyRow>}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {editing && <ActivityEditor key={editing === "new" ? "new" : editing.id} row={editing === "new" ? null : editing} all={store.activities} onClose={() => setEditing(null)} onSave={save} />}
+      {confirm && target && (
+        confirm.kind === "delete" ? (
+          <ConfirmDialog title={`Delete ${target.name}?`} confirmLabel="Delete activity" onConfirm={() => remove(target)} onClose={() => setConfirm(null)}>
+            This permanently removes the activity. No budgets or spend use it yet.
+          </ConfirmDialog>
+        ) : (
+          <ConfirmDialog tone="warn" title={`Deactivate ${target.name}?`} confirmLabel="Deactivate" onConfirm={() => setActive(target, false)} onClose={() => setConfirm(null)}>
+            It won&apos;t be offered for new budgets or spend entries. Figures already entered keep this activity and still count in Budget &amp; Outreach.
+          </ConfirmDialog>
+        )
+      )}
+    </>
+  );
+}
+
+function ActivityEditor({ row, all, onClose, onSave }: { row: ActivityRec | null; all: ActivityRec[]; onClose: () => void; onSave: (r: ActivityRec, before: ActivityRec | null) => void }) {
+  const [f, setF] = useState<ActivityRec>(() => row ?? { id: "", name: "", group: "Others", unit: "", active: true, custom: true });
+  const errors: string[] = [];
+  if (!f.name.trim()) errors.push("Enter the activity name.");
+  else if (all.some((s) => s.id !== row?.id && sameText(s.name, f.name))) errors.push("An activity with this name already exists.");
+  if (!f.unit.trim()) errors.push("Enter what is counted for this activity, e.g. events.");
+  const clean = { ...f, name: f.name.trim(), unit: f.unit.trim().toLowerCase() };
+  return (
+    <MasterEditor
+      title={row ? `Edit ${row.name}` : "Add outreach activity"} errors={errors} saveLabel={row ? "Save changes" : "Add activity"} onClose={onClose}
+      onSave={() => onSave(row ? clean : { ...clean, id: newId("act", f.name) }, row)}
+    >
+      <Field label="Activity"><input className={inputCls} value={f.name} onChange={(e) => setF((x) => ({ ...x, name: e.target.value }))} placeholder="School van branding" autoFocus /></Field>
+      <div>
+        <span className="mb-1 block text-xs font-medium text-slate-600">Reporting group</span>
+        <Dropdown<SourceGroup> ariaLabel="Reporting group" value={f.group} onChange={(v) => setF((x) => ({ ...x, group: v }))} options={SOURCE_GROUPS.map((g) => ({ value: g, label: g }))} />
+        <span className="mt-1 block text-[11px] text-slate-400">The lead-source group whose leads this activity drives</span>
+      </div>
+      <Field label="Counted as" hint="What the activity count in the spend log means (plural)"><input className={inputCls} value={f.unit} onChange={(e) => setF((x) => ({ ...x, unit: e.target.value }))} placeholder="events" /></Field>
+      {row && row.name !== f.name.trim() && f.name.trim() && (
+        <p className="rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800">Budgets and spend already entered for {row.name} move to the new name.</p>
+      )}
+    </MasterEditor>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Change log                                                          */
 /* ------------------------------------------------------------------ */
 
 const ACTION_TONE: Record<AuditAction, "green" | "blue" | "red" | "amber" | "violet" | "slate"> = {
   Created: "green", Updated: "blue", Deleted: "red", Deactivated: "amber", Reactivated: "violet", Approved: "green",
 };
-const MASTERS: MasterKey[] = ["Status mapping", "Location", "Grade / programme", "Lead source", "Withdrawal reason", "Cycle"];
+const MASTERS: MasterKey[] = ["Status mapping", "Location", "Grade / programme", "Lead source", "Withdrawal reason", "Outreach activity", "Cycle"];
 
 export function AuditTab({ store, onReset, canReset }: { store: TabProps["store"]; onReset: () => void; canReset: boolean }) {
   const [master, setMaster] = useState<MasterKey | "All">("All");
@@ -288,7 +409,7 @@ export function AuditTab({ store, onReset, canReset }: { store: TabProps["store"
       </Card>
       {confirmReset && (
         <ConfirmDialog title="Reset all master data?" confirmLabel="Reset" onConfirm={onReset} onClose={() => setConfirmReset(false)}>
-          Every location, grade, status mapping, lead source, reason and cycle goes back to the source-system data, and this change log is cleared. This can&apos;t be undone.
+          Every location, grade, status mapping, lead source, reason, outreach activity and cycle goes back to the source-system data, and this change log is cleared. This can&apos;t be undone.
         </ConfirmDialog>
       )}
     </>

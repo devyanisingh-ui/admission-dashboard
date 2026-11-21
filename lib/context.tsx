@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { EMPTY_STORE, overridesOf, reviveStore, type SeatStore } from "./seat-matrix";
 import { reviveMasters, seedMasters, STORAGE_KEY as MASTERS_KEY, type MasterStore } from "./masters";
-import { EMPTY_MARKETING, MARKETING_KEY, reviveMarketing, setMarketingData, type MarketingStore } from "./marketing";
+import { applyActivities, EMPTY_MARKETING, MARKETING_KEY, reviveMarketing, setMarketingData, type MarketingStore } from "./marketing";
 import { allLocations, applyMasters, CURRENT_CYCLE, CYCLE_MONTHS, LOCATIONS, locationById, setSeatOverrides, setTargetOverrides, type Board, type Cycle, type Location, type SourceGroup, type Vertical } from "./data";
 
 /** Date-range presets within the admission cycle (Oct → Sep). */
@@ -186,6 +186,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const store = f(cur.store);
       if (store === cur.store) return cur;
       applyMasters(store);
+      applyActivities(store.activities);
       try {
         localStorage.setItem(MASTERS_KEY, JSON.stringify(store));
       } catch {}
@@ -197,6 +198,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const store = raw ? reviveMasters(JSON.parse(raw)) : null;
       if (store) {
         applyMasters(store);
+        applyActivities(store.activities);
         setMaster((cur) => ({ store, version: cur.version + 1 }));
       }
     } catch {}

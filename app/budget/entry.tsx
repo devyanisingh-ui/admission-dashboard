@@ -10,11 +10,11 @@ import {
 import { Card, fmt } from "@/components/ui";
 import { useApp } from "@/lib/context";
 import { CYCLE_MONTHS, locationById, pct } from "@/lib/data";
-import { cycleData, newEntryId, OUTREACH_ACTIVITIES, type BudgetRec, type SpendRec } from "@/lib/marketing";
+import { activityByName, activityOptions, ALL_ACTIVITIES, cycleData, newEntryId, OUTREACH_ACTIVITIES, type BudgetRec, type SpendRec } from "@/lib/marketing";
 
 const PAGE = 25;
-const groupOf = (activity: string) => OUTREACH_ACTIVITIES.find((a) => a.type === activity)?.group ?? "Others";
-const unitOf = (activity: string) => OUTREACH_ACTIVITIES.find((a) => a.type === activity)?.unit ?? "activities";
+const groupOf = (activity: string) => activityByName(activity)?.group ?? "Others";
+const unitOf = (activity: string) => activityByName(activity)?.unit ?? "activities";
 const th = "px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-slate-500";
 
 export function BudgetEntry() {
@@ -62,7 +62,7 @@ function LocationFilter({ value, onChange }: { value: string; onChange: (v: stri
 function ActivityFilter({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <Dropdown size="sm" ariaLabel="Activity" value={value} onChange={onChange}
-      options={[{ value: "all", label: "All activities" }, ...OUTREACH_ACTIVITIES.map((a) => ({ value: a.type, label: a.type }))]} />
+      options={[{ value: "all", label: "All activities" }, ...ALL_ACTIVITIES.map((a) => ({ value: a.type, label: a.type }))]} />
   );
 }
 function ActivityName({ activity }: { activity: string }) {
@@ -89,7 +89,7 @@ function Allocations({ rows, spend, canEdit, entry }: { rows: BudgetRec[]; spend
   const s = q.trim().toLowerCase();
   const list = rows
     .filter((r) => (loc === "all" || r.locationId === loc) && (act === "all" || r.activity === act) && (!s || `${locationById(r.locationId).short} ${r.activity}`.toLowerCase().includes(s)))
-    .sort((a, b) => recentFirst(a, b) || locationById(a.locationId).short.localeCompare(locationById(b.locationId).short) || OUTREACH_ACTIVITIES.findIndex((x) => x.type === a.activity) - OUTREACH_ACTIVITIES.findIndex((x) => x.type === b.activity));
+    .sort((a, b) => recentFirst(a, b) || locationById(a.locationId).short.localeCompare(locationById(b.locationId).short) || ALL_ACTIVITIES.findIndex((x) => x.type === a.activity) - ALL_ACTIVITIES.findIndex((x) => x.type === b.activity));
   const total = list.reduce((a, r) => a + r.allocated, 0);
   const totalSpent = list.reduce((a, r) => a + spentOf(r), 0);
 
@@ -165,11 +165,12 @@ function Allocations({ rows, spend, canEdit, entry }: { rows: BudgetRec[]; spend
 
 function AllocationEditor({ row, rows, entry, onClose }: { row: BudgetRec | null; rows: BudgetRec[]; entry: Entry; onClose: () => void }) {
   const { filteredLocations } = useApp();
-  const [f, setF] = useState({ locationId: row?.locationId ?? filteredLocations[0]?.id ?? "", activity: row?.activity ?? OUTREACH_ACTIVITIES[0].type, allocated: row ? String(row.allocated) : "" });
+  const [f, setF] = useState({ locationId: row?.locationId ?? filteredLocations[0]?.id ?? "", activity: row?.activity ?? OUTREACH_ACTIVITIES[0]?.type ?? "", allocated: row ? String(row.allocated) : "" });
   const amount = num(f.allocated);
   const dup = rows.find((r) => r.id !== row?.id && r.locationId === f.locationId && r.activity === f.activity);
   const errors = [
     !f.locationId && "Pick a school.",
+    !f.activity && "Add an outreach activity in Masters first.",
     Number.isNaN(amount) && "Enter the annual budget.",
     dup && `${locationById(f.locationId).short} already has a ${f.activity} budget — edit that one instead.`,
   ].filter(Boolean) as string[];
@@ -191,7 +192,7 @@ function AllocationEditor({ row, rows, entry, onClose }: { row: BudgetRec | null
         <Dropdown ariaLabel="School" value={f.locationId} onChange={(v) => setF((x) => ({ ...x, locationId: v }))} disabled={!!row} options={filteredLocations.map((l) => ({ value: l.id, label: l.name }))} />
       </Field>
       <Field label="Activity">
-        <Dropdown ariaLabel="Activity" value={f.activity} onChange={(v) => setF((x) => ({ ...x, activity: v }))} disabled={!!row} options={OUTREACH_ACTIVITIES.map((a) => ({ value: a.type, label: a.type }))} />
+        <Dropdown ariaLabel="Activity" value={f.activity} onChange={(v) => setF((x) => ({ ...x, activity: v }))} disabled={!!row} options={activityOptions(f.activity)} />
       </Field>
       <NumberField label="Annual budget (₹)" prefix="₹" value={f.allocated} onChange={(v) => setF((x) => ({ ...x, allocated: v }))} hint={Number.isNaN(amount) ? "Whole rupees" : inr(amount)} />
     </MasterEditor>
@@ -299,7 +300,7 @@ function SpendLog({ rows, canEdit, entry }: { rows: SpendRec[]; canEdit: boolean
 export function SpendEditor({ row, entry, onClose, activity }: { row: SpendRec | null; entry: Entry; onClose: () => void; /** Pre-selects the activity for a new entry. */ activity?: string }) {
   const { filteredLocations } = useApp();
   const [f, setF] = useState({
-    locationId: row?.locationId ?? filteredLocations[0]?.id ?? "", activity: row?.activity ?? activity ?? OUTREACH_ACTIVITIES[0].type, month: row?.month ?? "Nov",
+    locationId: row?.locationId ?? filteredLocations[0]?.id ?? "", activity: row?.activity ?? activity ?? OUTREACH_ACTIVITIES[0]?.type ?? "", month: row?.month ?? "Nov",
     amount: row ? String(row.amount) : "", count: row ? String(row.count) : "", leads: row ? String(row.leads ?? 0) : "", note: row?.note ?? "",
   });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
@@ -308,6 +309,7 @@ export function SpendEditor({ row, entry, onClose, activity }: { row: SpendRec |
   const leads = num(f.leads);
   const errors = [
     !f.locationId && "Pick a school.",
+    !f.activity && "Add an outreach activity in Masters first.",
     Number.isNaN(amount) && "Enter the amount spent.",
     Number.isNaN(count) && `Enter the number of ${unitOf(f.activity)} run (0 if none).`,
     Number.isNaN(leads) && "Enter the leads generated (0 if none).",
@@ -339,7 +341,7 @@ export function SpendEditor({ row, entry, onClose, activity }: { row: SpendRec |
       </Field>
       <div className="grid grid-cols-[minmax(0,1fr)_110px] gap-3">
         <Field label="Activity">
-          <Dropdown ariaLabel="Activity" value={f.activity} onChange={(v) => set("activity", v)} options={OUTREACH_ACTIVITIES.map((a) => ({ value: a.type, label: a.type }))} />
+          <Dropdown ariaLabel="Activity" value={f.activity} onChange={(v) => set("activity", v)} options={activityOptions(row?.activity)} />
         </Field>
         <Field label="Month">
           <Dropdown ariaLabel="Month" value={f.month} onChange={(v) => set("month", v)} options={CYCLE_MONTHS.map((m) => ({ value: m, label: m }))} />

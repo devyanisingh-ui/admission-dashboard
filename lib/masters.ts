@@ -1,12 +1,12 @@
 /**
  * Master data maintained in the dashboard: locations, academic units, LeadSquared status mapping,
- * lead sources, withdrawal reasons and admission cycles — plus an audit log of every change.
+ * lead sources, withdrawal reasons, outreach activities and admission cycles — plus an audit log of every change.
  *
  * Records loaded from the source systems already have history (leads, admissions, withdrawals) pointing at them,
  * so they can only be deactivated. Records created here and not yet used can be deleted outright.
  */
 import {
-  SEED_CYCLES, SEED_LOCATIONS, SEED_REASONS, SEED_SOURCE_GROUP_OF, SEED_SOURCES, SEED_STATUS_MAPPINGS,
+  SEED_ACTIVITIES, SEED_CYCLES, SEED_LOCATIONS, SEED_REASONS, SEED_SOURCE_GROUP_OF, SEED_SOURCES, SEED_STATUS_MAPPINGS,
   type Board, type CycleDef, type Location, type SourceGroup, type StatusMapping, type Vertical,
 } from "./data";
 
@@ -45,9 +45,17 @@ export interface ReasonRec extends Base {
   name: string;
   appliesTo: (typeof REASON_SCOPES)[number];
 }
+/** An outreach activity that budgets and spend are entered against (Budget & Outreach). */
+export interface ActivityRec extends Base {
+  name: string;
+  /** Lead-source reporting group the activity feeds. */
+  group: SourceGroup;
+  /** What is counted for the activity, e.g. "campaigns" or "fairs". */
+  unit: string;
+}
 export type CycleRec = Base & CycleDef;
 
-export type MasterKey = "Status mapping" | "Location" | "Grade / programme" | "Lead source" | "Withdrawal reason" | "Cycle";
+export type MasterKey = "Status mapping" | "Location" | "Grade / programme" | "Lead source" | "Withdrawal reason" | "Outreach activity" | "Cycle";
 export type AuditAction = "Created" | "Updated" | "Deleted" | "Deactivated" | "Reactivated" | "Approved";
 export interface AuditRec {
   id: string;
@@ -65,6 +73,7 @@ export interface MasterStore {
   statuses: StatusRec[];
   sources: SourceRec[];
   reasons: ReasonRec[];
+  activities: ActivityRec[];
   cycles: CycleRec[];
   audit: AuditRec[];
 }
@@ -90,6 +99,7 @@ export function seedMasters(): MasterStore {
     statuses: SEED_STATUS_MAPPINGS.map((s) => ({ ...s, id: s.status, active: true })),
     sources: SEED_SOURCES.map((name) => ({ id: slug(name), name, group: SEED_SOURCE_GROUP_OF[name], active: true })),
     reasons: SEED_REASONS.map((name) => ({ id: slug(name), name, appliesTo: "Both" as const, active: true })),
+    activities: SEED_ACTIVITIES.map((a) => ({ ...a, active: true })),
     cycles: SEED_CYCLES.map((c) => ({ ...c, id: `${c.vertical}|${c.cycle}`, active: true })),
     audit: [],
   };
@@ -103,7 +113,7 @@ export function reviveMasters(raw: unknown): MasterStore | null {
   const arr = <K extends keyof MasterStore>(k: K) => (Array.isArray(s[k]) ? (s[k] as MasterStore[K]) : seed[k]);
   return {
     locations: arr("locations"), units: arr("units"), statuses: arr("statuses"), sources: arr("sources"),
-    reasons: arr("reasons"), cycles: arr("cycles"), audit: arr("audit"),
+    reasons: arr("reasons"), activities: arr("activities"), cycles: arr("cycles"), audit: arr("audit"),
   };
 }
 

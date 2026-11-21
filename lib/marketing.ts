@@ -7,7 +7,7 @@
  * (used only for the dashboard leaderboard's cost per admission) still come from FABS.
  */
 import {
-  CYCLE_MONTHS, SEED_LOCATIONS, locationTotals, rng, SOURCE_GROUP_OF, SOURCE_GROUP_SHARE, SOURCE_GROUPS, sourceBreakdown, totalsFor,
+  CYCLE_MONTHS, SEED_ACTIVITIES, SEED_LOCATIONS, locationTotals, rng, SOURCE_GROUP_OF, SOURCE_GROUP_SHARE, SOURCE_GROUPS, sourceBreakdown, totalsFor,
   type Cycle, type SourceGroup,
 } from "./data";
 import { splitExact } from "./dashboard";
@@ -18,16 +18,27 @@ const between = (r: () => number, min: number, max: number) => min + r() * (max 
 /* Reference lists                                                     */
 /* ------------------------------------------------------------------ */
 
-export const OUTREACH_ACTIVITIES: { type: string; group: SourceGroup; unit: string }[] = [
-  { type: "Digital ads", group: "Digital", unit: "campaigns" },
-  { type: "RWA activations", group: "RWA", unit: "activations" },
-  { type: "Preschool tie-ups", group: "Preschool / Crèche", unit: "partner events" },
-  { type: "Education fairs", group: "Education Fairs", unit: "fairs" },
-  { type: "Corporate tie-ups", group: "Corporate", unit: "sessions" },
-  { type: "Print, outdoor & events", group: "Others", unit: "placements" },
-];
-/** Share of each location's budget allocated to each activity (same order as OUTREACH_ACTIVITIES). */
+export interface OutreachActivity { id: string; type: string; group: SourceGroup; unit: string; active: boolean }
+const fromSeed = () => SEED_ACTIVITIES.map((a) => ({ id: a.id, type: a.name, group: a.group, unit: a.unit, active: true }));
+/** Every outreach activity in the Masters, inactive ones included (their past figures still count in reports). */
+export const ALL_ACTIVITIES: OutreachActivity[] = fromSeed();
+/** Active outreach activities — offered for new budgets and spend entries. */
+export const OUTREACH_ACTIVITIES: OutreachActivity[] = fromSeed();
+/** Share of each location's budget allocated to each seed activity (same order as SEED_ACTIVITIES). */
 const BUDGET_MIX = [0.3, 0.16, 0.14, 0.16, 0.08, 0.16];
+
+/** Points the activity lists at the Masters (updated in place); renamed seed activities carry their starting data. */
+export function applyActivities(list: { id: string; name: string; group: SourceGroup; unit: string; active: boolean }[]) {
+  const all = list.map((a) => ({ id: a.id, type: a.name, group: a.group, unit: a.unit, active: a.active }));
+  ALL_ACTIVITIES.splice(0, ALL_ACTIVITIES.length, ...all);
+  OUTREACH_ACTIVITIES.splice(0, OUTREACH_ACTIVITIES.length, ...all.filter((a) => a.active));
+  seedCache.clear();
+}
+/** Activity details by name (any activity, active or not). */
+export const activityByName = (name: string) => ALL_ACTIVITIES.find((a) => a.type === name);
+/** Activities to offer in a picker: active ones, plus the current value if it has been deactivated. */
+export const activityOptions = (current?: string) =>
+  ALL_ACTIVITIES.filter((a) => a.active || a.type === current).map((a) => ({ value: a.type, label: a.active ? a.type : `${a.type} (inactive)` }));
 /** How an annual allocation is planned across the cycle (Oct → Sep). */
 export const PLAN_SHAPE = [0.1, 0.14, 0.15, 0.14, 0.12, 0.1, 0.08, 0.06, 0.04, 0.03, 0.02, 0.02];
 const SOCIAL_SHAPE = [0.07, 0.11, 0.13, 0.14, 0.13, 0.11, 0.09, 0.07, 0.05, 0.04, 0.03, 0.03];
@@ -178,12 +189,14 @@ function seedCycle(cycle: Cycle): CycleData {
     const annual = Math.round((loc.vertical === "Schools" ? between(r0, 18, 30) : between(r0, 45, 80)) * 100000);
     let digitalSpent = 0;
     const startLeads = groupOutcomes([id], cycle);
-    OUTREACH_ACTIVITIES.forEach((a, i) => {
-      const r = rng("act" + id + cycle + a.type);
+    SEED_ACTIVITIES.forEach((seed, i) => {
+      const live = ALL_ACTIVITIES.find((x) => x.id === seed.id);
+      const a = { type: live?.type ?? seed.name, group: live?.group ?? seed.group };
+      const r = rng("act" + id + cycle + seed.name);
       const allocated = Math.round(annual * BUDGET_MIX[i]);
       const spent = Math.round(allocated * between(r, 0.72, 1.08));
       const count = Math.round(between(r, 3, 14));
-      if (a.type === "Digital ads") digitalSpent = spent;
+      if (seed.id === "digital-ads") digitalSpent = spent;
       data.budgets.push({ id: `b-${cycle}-${id}-${i}`, locationId: id, activity: a.type, allocated, ...SEED_STAMP });
       const amounts = splitExact(spent, PLAN_SHAPE.map((s) => s * between(r, 0.8, 1.2)));
       const counts = splitExact(count, PLAN_SHAPE);
@@ -267,7 +280,7 @@ const inLocs = <T extends { locationId: string }>(rows: T[], locIds: string[]) =
 /* ------------------------------------------------------------------ */
 
 export interface OutreachRow {
-  type: string; group: SourceGroup; unit: string;
+  id: string; type: string; group: SourceGroup; unit: string; active: boolean;
   allocated: number; spent: number; activities: number; leads: number; admissions: number; cpl: number; cpa: number;
 }
 
@@ -290,7 +303,7 @@ export function outreachByActivity(locIds: string[], cycle: Cycle): OutreachRow[
   const budgets = inLocs(d.budgets, locIds);
   const spend = inLocs(d.spend, locIds);
   const outcomes = groupOutcomes(locIds, cycle);
-  return OUTREACH_ACTIVITIES.map((a) => {
+  return ALL_ACTIVITIES.map((a) => {
     const allocated = budgets.filter((b) => b.activity === a.type).reduce((s, b) => s + b.allocated, 0);
     const mine = spend.filter((x) => x.activity === a.type);
     const spent = mine.reduce((s, x) => s + x.amount, 0);
@@ -298,7 +311,7 @@ export function outreachByActivity(locIds: string[], cycle: Cycle): OutreachRow[
     const leads = mine.reduce((s, x) => s + (x.leads ?? 0), 0);
     const { admissions } = outcomes[a.group];
     return { ...a, allocated, spent, activities, leads, admissions, cpl: leads ? spent / leads : 0, cpa: admissions ? spent / admissions : 0 };
-  });
+  }).filter((r) => r.active || r.allocated || r.spent || r.activities || r.leads);
 }
 
 export function outreachTotals(locIds: string[], cycle: Cycle) {

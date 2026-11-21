@@ -154,6 +154,16 @@ export const WITHDRAWAL_REASONS: string[] = [...SEED_REASONS];
 /** Reasons past withdrawals carry, in load order (renames applied). */
 export const HIST_REASONS: string[] = [...SEED_REASONS];
 
+/** Outreach activities budgets and spend are entered against (maintained in Masters). */
+export const SEED_ACTIVITIES: { id: string; name: string; group: SourceGroup; unit: string }[] = [
+  { id: "digital-ads", name: "Digital ads", group: "Digital", unit: "campaigns" },
+  { id: "rwa-activations", name: "RWA activations", group: "RWA", unit: "activations" },
+  { id: "preschool-tie-ups", name: "Preschool tie-ups", group: "Preschool / Crèche", unit: "partner events" },
+  { id: "education-fairs", name: "Education fairs", group: "Education Fairs", unit: "fairs" },
+  { id: "corporate-tie-ups", name: "Corporate tie-ups", group: "Corporate", unit: "sessions" },
+  { id: "print-outdoor-events", name: "Print, outdoor & events", group: "Others", unit: "placements" },
+];
+
 /* ------------------------------------------------------------------ */
 /* Unit-level stats                                                    */
 /* ------------------------------------------------------------------ */

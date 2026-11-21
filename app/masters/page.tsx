@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { AlertTriangle, Building2, Check, CheckCircle2, GitBranch, Layers, ListChecks, Megaphone, UserMinus, X } from "lucide-react";
+import { AlertTriangle, Building2, Check, CheckCircle2, GitBranch, Layers, ListChecks, Megaphone, Target, UserMinus, X } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { Dropdown } from "@/components/dropdown";
 import { ConfirmDialog, Field, inputCls, MasterEditor, MasterToolbar, NewBadge, RowActions } from "@/components/master-kit";
@@ -9,7 +9,7 @@ import { Badge, Button, Card, Guard, Note, PageHeader, Tabs, fmt } from "@/compo
 import { useApp } from "@/lib/context";
 import { DATA_TODAY, FUNNEL_STAGES, statusLeadCounts, type FunnelStage } from "@/lib/data";
 import { describeChanges, nowLabel, seedMasters, type StatusRec } from "@/lib/masters";
-import { AuditTab, ReasonsTab, SourcesTab } from "./tab-lists";
+import { ActivitiesTab, AuditTab, ReasonsTab, SourcesTab } from "./tab-lists";
 import { LocationsTab, UnitsTab } from "./tab-locations";
 import { EditBadge, EmptyRow, FilterChip, sameText, tdc, thL, thR, useListFilter, type Commit, type TabProps } from "./shared";
 
@@ -21,7 +21,7 @@ export default function MastersPage() {
   );
 }
 
-type Tab = "status" | "locations" | "units" | "sources" | "reasons" | "log";
+type Tab = "status" | "locations" | "units" | "sources" | "reasons" | "activities" | "log";
 
 function Masters() {
   // Master data lives in the app context, so every page reads the same lists.
@@ -68,7 +68,7 @@ function Masters() {
       <PageHeader title="Masters & configuration" subtitle="Maintained by the Central Admin / Support team · approvals by the Vertical Admissions Head · every change is audit-logged" />
 
       {/* Health of each master — click to open its tab */}
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-5">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
         <HealthCard
           active={tab === "status"} onClick={() => setTab("status")} icon={ListChecks} tone={unmapped ? "rose" : pending ? "orange" : "green"}
           label="Status mapping" value={`${statuses.length - open} / ${statuses.length}`}
@@ -90,6 +90,10 @@ function Masters() {
           active={tab === "reasons"} onClick={() => setTab("reasons")} icon={UserMinus} tone="rose-soft"
           label="Withdrawal reasons" value={store.reasons.filter((s) => s.active).length} sub={`Active${inactive(store.reasons.filter((s) => !s.active).length)}`}
         />
+        <HealthCard
+          active={tab === "activities"} onClick={() => setTab("activities")} icon={Target} tone="amber"
+          label="Outreach activities" value={store.activities.filter((a) => a.active).length} sub={`Active${inactive(store.activities.filter((a) => !a.active).length)}`}
+        />
       </div>
 
       <Tabs
@@ -101,6 +105,7 @@ function Masters() {
           { id: "units", label: "Grades & programmes" },
           { id: "sources", label: "Lead sources" },
           { id: "reasons", label: "Withdrawal reasons" },
+          { id: "activities", label: "Outreach activities" },
           { id: "log", label: <>Change log {store.audit.length > 0 && <span className="ml-1 text-xs text-slate-400">{store.audit.length}</span>}</> },
         ]}
       />
@@ -109,6 +114,7 @@ function Masters() {
       {tab === "units" && <UnitsTab {...tabProps} />}
       {tab === "sources" && <SourcesTab {...tabProps} />}
       {tab === "reasons" && <ReasonsTab {...tabProps} />}
+      {tab === "activities" && <ActivitiesTab {...tabProps} />}
       {tab === "log" && <AuditTab store={store} onReset={reset} canReset={can("locationMaster.edit")} />}
 
       <p className="mt-4 text-[11px] text-slate-400">
@@ -357,6 +363,7 @@ const HEALTH_TONE = {
   "rose-soft": "bg-rose-50 text-rose-500",
   blue: "bg-sky-100 text-sky-600",
   violet: "bg-violet-100 text-violet-600",
+  amber: "bg-amber-100 text-amber-600",
 };
 
 /** Summary card for one master; doubles as a shortcut to its tab. */

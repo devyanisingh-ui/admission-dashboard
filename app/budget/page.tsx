@@ -97,7 +97,7 @@ function Budget() {
       <div className="mt-4 grid items-stretch gap-4 2xl:grid-cols-2">
         <Panel title="Budget utilisation by activity" sub="spend against allocation" className="h-full">
           <ul className="space-y-3.5">
-            {rows.map((r) => <UtilisationRow key={r.type} r={r} />)}
+            {rows.filter((r) => r.allocated || r.spent).map((r) => <UtilisationRow key={r.type} r={r} />)}
           </ul>
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-2.5 text-[11px] text-slate-500">
             <span className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-slate-200" /> Allocated</span>

@@ -14,7 +14,7 @@ import { useApp } from "@/lib/context";
 import { quickInsights, type DashboardData, type Insight, type InsightKind } from "@/lib/dashboard";
 import { CYCLE_MONTHS, CYCLES, pct, SOURCE_GROUPS, type Cycle } from "@/lib/data";
 import { downloadCsv } from "@/lib/export";
-import { SOCIAL_PLATFORMS, OUTREACH_ACTIVITIES } from "@/lib/marketing";
+import { SOCIAL_PLATFORMS, ALL_ACTIVITIES } from "@/lib/marketing";
 import { REPORT_DEFS, type Row } from "@/lib/reports";
 import { Dropdown } from "./dropdown";
 import { fmt } from "./ui";
@@ -536,7 +536,7 @@ function ReportRow({ r, ids, grades }: { r: PanelReport; ids: string[]; grades: 
     grade: [{ value: "All", label: "All grades" }, ...grades.map((g) => ({ value: g, label: g }))],
     source: [{ value: "All", label: "All sources" }, ...SOURCE_GROUPS.map((s) => ({ value: s, label: s }))],
     month: [{ value: "All", label: "All months" }, ...CYCLE_MONTHS.map((m) => ({ value: m, label: m }))],
-    activity: [{ value: "All", label: "All activities" }, ...OUTREACH_ACTIVITIES.map((a) => ({ value: a.type, label: a.type }))],
+    activity: [{ value: "All", label: "All activities" }, ...ALL_ACTIVITIES.map((a) => ({ value: a.type, label: a.type }))],
     platform: [{ value: "All", label: "All platforms" }, ...SOCIAL_PLATFORMS.map((p) => ({ value: p, label: p }))],
   };
   const download = () => {

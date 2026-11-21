@@ -59,6 +59,7 @@ Open <http://localhost:3000>.
   - Grades & programmes per location
   - Lead sources and their reporting groups
   - Withdrawal reasons
+  - Outreach activities that budgets and spend are entered against (renames carry entered figures with them)
 
   Changes apply across every page immediately. Records that already have history can only be deactivated, never hard-deleted.
 - **Administration** — users, sync jobs and the audit log.
