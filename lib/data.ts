@@ -932,6 +932,15 @@ export interface Alert {
   raised: string;
   audience: string;
 }
+/** Which alerts a role receives (as per the permission matrix). Shared by the Alerts page and the sidebar badge. */
+export function alertForRole(a: Alert, role: string): boolean {
+  if (role === "sysAdmin") return a.type === "Sync failure";
+  // Counsellors only received unmapped-admission alerts; lead ↔ FABS mapping is no longer done.
+  if (role === "counsellor") return false;
+  if (role === "leadership") return a.severity === "high" || a.type === "Source conversion drop";
+  return true;
+}
+
 export function buildAlerts(cycle: Cycle): Alert[] {
   const out: Alert[] = [
     { id: "a1", severity: "high", type: "Sync failure", title: "FABS sync failing", detail: "2 consecutive incremental runs failed (HTTP 504). Enrolment and withdrawal figures may be up to 39 minutes old.", raised: "17 Nov, 10:21", audience: "System Admin, Central Admin" },
@@ -946,9 +955,6 @@ export function buildAlerts(cycle: Cycle): Alert[] {
     const close = units.filter((u) => u.seats >= 10 && u.seats - (u.enrolled - u.withdrawnNew) <= u.seats * 0.1 && u.seats - (u.enrolled - u.withdrawnNew) > 0);
     for (const u of close.slice(0, 1))
       out.push({ id: "co" + loc.id + u.unit, severity: "low", type: "Grade close-out", title: `${loc.short} · ${u.unit}: ${u.seats - (u.enrolled - u.withdrawnNew)} seats left`, detail: `Fewer than 10% of seats for new admission remain.`, locationId: loc.id, raised: "17 Nov, 06:00", audience: "Location Head, Principal" });
-    const unm = mappingQueue(loc.id).filter((m) => (m.state === "suggested" || m.state === "unmatched") && m.fabs.hoursSinceEntry > 48).length;
-    if (unm)
-      out.push({ id: "um" + loc.id, severity: "medium", type: "Unmapped > 48h", title: `${loc.short}: ${unm} FABS admissions unmapped for over 48 hours`, detail: "Link them to LeadSquared leads or mark them as Direct admission.", locationId: loc.id, raised: "17 Nov, 10:00", audience: "Counsellors, Location Head" });
   }
   out.push({ id: "src1", severity: "medium", type: "Source conversion drop", title: "Meta Ads conversion down 27% vs last month (Group)", detail: "Lead-to-admission conversion for Meta Ads fell from 2.6% to 1.9%.", raised: "17 Nov, 06:00", audience: "Vertical Heads, Group Leadership" });
   return out;

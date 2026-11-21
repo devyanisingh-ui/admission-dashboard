@@ -10,7 +10,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { clampSpan, cycleBounds, DATE_RANGES, fmtDate, rangeLabelOf, spanDays, useApp, type DateRange, type DateSpan } from "@/lib/context";
 import {
-  buildAlerts, CYCLES, schoolGrades, SOURCE_GROUPS, SYNC_STATUS, type Board, type Cycle, type SourceGroup, type Vertical,
+  alertForRole, buildAlerts, CYCLES, schoolGrades, SOURCE_GROUPS, SYNC_STATUS, type Board, type Cycle, type SourceGroup, type Vertical,
 } from "@/lib/data";
 import { ROLES, type Permission, type RoleId } from "@/lib/roles";
 import { Dropdown } from "./dropdown";
@@ -55,9 +55,9 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const counts = useMemo(() => {
     const ids = app.allowedLocations.map((l) => l.id);
-    const alerts = buildAlerts(app.cycle).filter((a) => !a.locationId || ids.includes(a.locationId)).length;
+    const alerts = buildAlerts(app.cycle).filter((a) => (!a.locationId || ids.includes(a.locationId)) && alertForRole(a, app.role)).length;
     return { alerts };
-  }, [app.allowedLocations, app.cycle]);
+  }, [app.allowedLocations, app.cycle, app.role]);
 
   const initials = app.userName.replace(/^(Dr\.|Prof\.)\s*/, "").split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const scopeName = app.lockedLocation ? app.allowedLocations[0].name : app.lockedVertical ? `${app.allowedLocations[0].vertical} — all campuses` : "Apeejay Education — all campuses";

@@ -8,14 +8,13 @@ import { SnapshotCard } from "@/components/dashboard-widgets";
 import { Dropdown } from "@/components/dropdown";
 import { Badge, Note, PageHeader } from "@/components/ui";
 import { useApp } from "@/lib/context";
-import { buildAlerts, locationById, type Alert, type AlertSeverity } from "@/lib/data";
+import { alertForRole, buildAlerts, locationById, type Alert, type AlertSeverity } from "@/lib/data";
 
 /** Where each alert type is fixed. */
 const ACTIONS: Record<string, { label: string; href: string }> = {
   "Sync failure": { label: "View sync status", href: "/admin" },
   "Unmapped LeadSquared status": { label: "Map the status", href: "/masters" },
   "Grade close-out": { label: "View grade-wise report", href: "/grades" },
-  "Unmapped > 48h": { label: "View in System Views", href: "/systems" },
   "Seat fill below trajectory": { label: "View seat fill by grade", href: "/grades" },
   "Source conversion drop": { label: "View source performance", href: "/" },
 };
@@ -41,10 +40,7 @@ export default function AlertsPage() {
     () =>
       buildAlerts(cycle).filter((a) => {
         if (a.locationId && !ids.includes(a.locationId)) return false;
-        if (role === "sysAdmin") return a.type === "Sync failure";
-        if (role === "counsellor") return a.type === "Unmapped > 48h";
-        if (role === "leadership") return a.severity === "high" || a.type === "Source conversion drop";
-        return true;
+        return alertForRole(a, role);
       }),
     [cycle, role, ids.join()],
   );
