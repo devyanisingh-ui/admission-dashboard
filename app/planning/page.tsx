@@ -356,7 +356,7 @@ function SeatMatrix() {
       )}
 
       {!view.exists ? (
-        <div className="grid items-start gap-4 xl:grid-cols-4">
+        <div className="grid gap-4 xl:grid-cols-4">
           <div className="min-w-0 xl:col-span-3">
             <CreateMatrix
               key={`${loc.id}-${planCycle}`}
@@ -370,9 +370,9 @@ function SeatMatrix() {
               }}
             />
           </div>
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             <SetupProgress cycle={planCycle} />
-            <HistoryCard history={history} />
+            <HistoryCard className="flex-1" history={history} />
           </div>
         </div>
       ) : (
@@ -386,7 +386,7 @@ function SeatMatrix() {
             <SnapshotCard theme="rose" icon={ShieldCheck} label="EWS/DG filled" value={tot.ews ? (started ? `${tot.ewsFilled} / ${tot.ews}` : fmt(tot.ews)) : "—"} change={null} sub={tot.ews ? (started ? `${fmtPct(pct(tot.ewsFilled, tot.ews), 0)} of reserved seats` : "Reserved seats") : "No reserved seats"} />
           </div>
 
-          <div className="grid items-start gap-4 xl:grid-cols-4">
+          <div className="grid gap-4 xl:grid-cols-4">
             <div className="min-w-0 space-y-3 xl:col-span-3">
               <Card
                 title={`${loc.name} — Seat Matrix ${cycleText(planCycle)}`}
@@ -544,7 +544,7 @@ function SeatMatrix() {
               {started && <Note tone="warn">Open item #2: if FABS already holds intake data, intake and continuing will be read from FABS instead of entered here.</Note>}
             </div>
 
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               {(started || cycleRequests.length > 0) && (
                 <Card
                   title="Change requests"
@@ -588,7 +588,7 @@ function SeatMatrix() {
                 </Card>
               )}
               {!started && <SetupProgress cycle={planCycle} />}
-              <HistoryCard history={history} />
+              <HistoryCard className="flex-1" history={history} />
             </div>
           </div>
         </>
@@ -852,9 +852,9 @@ function SetupProgress({ cycle }: { cycle: PlanCycle }) {
   );
 }
 
-function HistoryCard({ history }: { history: HistoryEntry[] }) {
+function HistoryCard({ history, className }: { history: HistoryEntry[]; className?: string }) {
   return (
-    <Card title="Change history" subtitle="Who, when, old → new" actions={<History size={14} className="text-slate-400" />} bodyClass={history.length ? "p-0" : undefined}>
+    <Card className={className} title="Change history" subtitle="Who, when, old → new" actions={<History size={14} className="text-slate-400" />} bodyClass={history.length ? "p-0" : undefined}>
       {!history.length ? (
         <p className="text-sm text-slate-500">No changes saved in the dashboard yet.</p>
       ) : (
@@ -949,7 +949,7 @@ function Targets() {
         <SnapshotCard theme={behind.length ? "rose" : "green"} icon={AlertTriangle} label="Behind target" value={behind.length} change={null} sub={`${unitLabel.toLowerCase()}${behind.length === 1 ? "" : "s"} below 80% achievement`} />
       </div>
 
-      <div className="grid items-start gap-4 xl:grid-cols-4">
+      <div className="grid gap-4 xl:grid-cols-4">
         <Card
           className="xl:col-span-3"
           title={`${loc.name} — admission targets`}
@@ -1023,8 +1023,8 @@ function Targets() {
           </div>
         </Card>
 
-        <div className="space-y-4">
-          <Card title="Behind target" subtitle="Below 80% achievement">
+        <div className="flex flex-col gap-4">
+          <Card className="flex-1" title="Behind target" subtitle="Below 80% achievement">
             {behind.length ? (
               <ul className="space-y-2">
                 {behind.map((u) => (

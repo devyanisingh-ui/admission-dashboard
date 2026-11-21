@@ -188,7 +188,7 @@ function SaasView({ locs, t }: { locs: Location[]; t: T }) {
         <SnapshotCard theme="violet" icon={Building2} label="Schools reporting" value={locs.length} change={null} sub="With a mapped SaaS location code" />
       </div>
 
-      <div className="mt-4 grid items-start gap-4 xl:grid-cols-5">
+      <div className="mt-4 grid gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-3" title="Registrations by location" subtitle="SaaS location codes, resolved through the School Master" bodyClass="p-0">
           <Table head={["Location", "SaaS code", "Forms", "In LeadSquared", "Not yet in LeadSquared", "Share"]}>
             {byLoc.map((r) => (
@@ -273,7 +273,7 @@ function CrmView({ locs, t }: { locs: Location[]; t: T }) {
       </div>
 
       {/* Three equal columns on wide screens; status list stacks above the two bar lists on narrower ones. */}
-      <div className="mt-4 grid items-start gap-4 xl:grid-cols-2 2xl:grid-cols-3 2xl:items-stretch">
+      <div className="mt-4 grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
         <Card
           title="Leads by LeadSquared status"
           subtitle={`Raw LeadSquared statuses grouped by the funnel stage they map to (${onlyHigherEd ? "Higher Ed" : "Schools"} mapping)`}
@@ -293,11 +293,11 @@ function CrmView({ locs, t }: { locs: Location[]; t: T }) {
           </table>
         </Card>
 
-        <div className="space-y-4 2xl:contents 2xl:space-y-0">
+        <div className="flex flex-col gap-4 2xl:contents">
           <Card title="Leads by source" subtitle="LeadSquared source field">
             <BarList rows={[...sources].sort((a, b) => b.leads - a.leads).map((s) => ({ label: s.source, value: s.leads }))} color="bg-violet-500" />
           </Card>
-          <Card title="Leads by location" subtitle="LeadSquared location codes, resolved through the School Master">
+          <Card className="flex-1" title="Leads by location" subtitle="LeadSquared location codes, resolved through the School Master">
             <BarList
               rows={locs
                 .map((l) => ({ label: l.short, sub: l.codes.crm, value: locationTotals(l.id, cycle).leads }))

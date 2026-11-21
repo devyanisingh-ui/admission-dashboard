@@ -116,7 +116,7 @@ export default function AlertsPage() {
         </div>
       )}
 
-      <div className="grid items-start gap-4 2xl:grid-cols-2">
+      <div className="grid gap-4 2xl:grid-cols-2">
         {groups.map((g) => {
           const action = ACTIONS[g.type];
           return (

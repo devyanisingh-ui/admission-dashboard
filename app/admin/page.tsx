@@ -129,7 +129,7 @@ function UsersTab() {
   const initials = (n: string) => n.replace(/^(Dr\.|Prof\.)\s*/, "").split(/\s+/).filter((w) => /^[A-Za-z]/.test(w)).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
   return (
-    <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div className="grid gap-4 2xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <Panel
         className="min-w-0"
         title="Users and role assignment"
@@ -274,7 +274,7 @@ function SyncTab() {
         })}
       </div>
 
-      <div className="mt-4 grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <Panel title="Schedule">
           <ul className="space-y-3 text-sm">
             <ScheduleItem when="Every 15 minutes" what="Incremental sync" detail="Modified-since filters; webhooks where available" />
