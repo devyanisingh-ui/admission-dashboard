@@ -48,19 +48,28 @@ function Withdrawals() {
 
   const peakMonth = movement.reduce((a, m) => (m.withdrawals > a.withdrawals ? m : a), movement[0]);
 
-  // Grade / programme breakdown only when one school or institution is selected.
+  // Grade / programme breakdown when the selection is one vertical (Schools or Higher Ed) or a single school:
+  // school grades and Higher Ed programmes don't belong in one table.
   const single = locs.length === 1 ? locs[0] : null;
-  const unitWord = single?.vertical === "Higher Ed" ? "programme" : "grade";
-  const byUnit = useMemo(
-    () =>
-      single
-        ? locationUnits(single.id, cycle).map((u) => ({
-            unit: u.unit, strength: u.continuing + u.enrolled - u.withdrawnNew - u.withdrawnExisting,
-            base: u.continuing + u.enrolled, wNew: u.withdrawnNew, wEx: u.withdrawnExisting,
-          }))
-        : [],
-    [key, seatVersion], // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const unitVertical = locs.length && locs.every((l) => l.vertical === locs[0].vertical) ? locs[0].vertical : null;
+  const showUnits = unitVertical !== null;
+  const unitWord = unitVertical === "Higher Ed" ? "programme" : "grade";
+  const unitScope = single ? single.short : `${locs.length} ${unitVertical === "Higher Ed" ? "institutions" : "schools"}`;
+  const byUnit = useMemo(() => {
+    if (!showUnits) return [];
+    // Same grade across schools is added up; units keep the order of the first school that has them.
+    const map = new Map<string, { unit: string; strength: number; base: number; wNew: number; wEx: number }>();
+    for (const l of locs)
+      for (const u of locationUnits(l.id, cycle)) {
+        const r = map.get(u.unit) ?? { unit: u.unit, strength: 0, base: 0, wNew: 0, wEx: 0 };
+        r.strength += u.continuing + u.enrolled - u.withdrawnNew - u.withdrawnExisting;
+        r.base += u.continuing + u.enrolled;
+        r.wNew += u.withdrawnNew;
+        r.wEx += u.withdrawnExisting;
+        map.set(u.unit, r);
+      }
+    return [...map.values()];
+  }, [key, seatVersion, showUnits]); // eslint-disable-line react-hooks/exhaustive-deps
   const rateMax = Math.max(6, ...byUnit.map((u) => pct(u.wNew + u.wEx, u.base)));
 
   return (
@@ -72,7 +81,7 @@ function Withdrawals() {
           <ExportButtons
             name={`withdrawals-${cycle}`}
             rows={() => [
-              ...movement.map((m) => ({ Section: "Month", Month: m.month, [single ? "Grade / programme" : "Scope"]: single ? "All" : `${locs.length} locations`, "New admission": m.withdrawnNew, "Existing student": m.withdrawnExisting, Total: m.withdrawnNew + m.withdrawnExisting })),
+              ...movement.map((m) => ({ Section: "Month", Month: m.month, Scope: single ? single.short : `${locs.length} locations`, "New admission": m.withdrawnNew, "Existing student": m.withdrawnExisting, Total: m.withdrawnNew + m.withdrawnExisting })),
               ...byUnit.map((u) => ({ Section: "Grade / programme", Month: "Year to date", "Grade / programme": u.unit, "New admission": u.wNew, "Existing student": u.wEx, Total: u.wNew + u.wEx })),
             ]}
           />
@@ -88,24 +97,24 @@ function Withdrawals() {
       </div>
 
       {/* When students leave — and, for one school, from which grade */}
-      <div className={clsx("mt-4 grid items-stretch gap-4", single && "2xl:grid-cols-2")}>
+      <div className={clsx("mt-4 grid items-stretch gap-4", showUnits && "2xl:grid-cols-2")}>
         <Panel title="Withdrawals by month" sub={`(Apr – Nov) · peak in ${peakMonth?.month ?? "—"}`} className="h-full">
-          <ResponsiveContainer width="100%" height={single ? 330 : 280}>
+          <ResponsiveContainer width="100%" height={showUnits ? 330 : 280}>
             <BarChart data={movement} margin={{ top: 8, right: 4, left: -16, bottom: 0 }}>
               <CartesianGrid stroke="#eef2f7" vertical={false} />
               <XAxis dataKey="month" tick={axis} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} />
               <YAxis tick={axis} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} cursor={{ fill: "#f1f5f9" }} />
               <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" iconSize={8} />
-              <Bar dataKey="withdrawnNew" name="New admission" stackId="m" fill={NEW} maxBarSize={single ? 30 : 40} isAnimationActive={false} />
-              <Bar dataKey="withdrawnExisting" name="Existing student" stackId="m" fill={EXISTING} radius={[3, 3, 0, 0]} maxBarSize={single ? 30 : 40} isAnimationActive={false} />
+              <Bar dataKey="withdrawnNew" name="New admission" stackId="m" fill={NEW} maxBarSize={showUnits ? 30 : 40} isAnimationActive={false} />
+              <Bar dataKey="withdrawnExisting" name="Existing student" stackId="m" fill={EXISTING} radius={[3, 3, 0, 0]} maxBarSize={showUnits ? 30 : 40} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
-          {!single && <p className="mt-2 text-[11px] text-slate-500">Pick a school in the Global Filters to see withdrawals by grade.</p>}
+          {!showUnits && <p className="mt-2 text-[11px] text-slate-500">Pick Schools or Higher Ed in the Vertical filter (or a single school) to see withdrawals by grade.</p>}
         </Panel>
 
-        {single && (
-          <Panel title={`Withdrawals by ${unitWord}`} sub={`${single.short} · rate = withdrawals ÷ students on roll this year`} className="h-full">
+        {showUnits && (
+          <Panel title={`Withdrawals by ${unitWord}`} sub={`${unitScope} · rate = withdrawals ÷ students on roll this year`} className="h-full">
             <div className="overflow-x-auto scroll-thin">
               <table className="w-full min-w-[440px] table-fixed text-sm tabular">
                 <colgroup><col className="w-[22%]" /><col className="w-[16%]" /><col className="w-[13%]" /><col className="w-[13%]" /><col /></colgroup>
@@ -131,7 +140,7 @@ function Withdrawals() {
                       </tr>
                     );
                   })}
-                  {!byUnit.length && <tr><td colSpan={5} className="py-6 text-center text-sm text-slate-500">No grades or programmes for this school.</td></tr>}
+                  {!byUnit.length && <tr><td colSpan={5} className="py-6 text-center text-sm text-slate-500">No grades or programmes for this selection.</td></tr>}
                 </tbody>
               </table>
             </div>
