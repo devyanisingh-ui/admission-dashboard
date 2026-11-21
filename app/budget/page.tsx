@@ -45,7 +45,7 @@ function Budget() {
     <>
       <PageHeader
         title="Budget & Outreach"
-        subtitle={`Budget and spend are entered by hand · leads from LeadSquared · admissions from FABS (matched to a lead) · session ${cycle.replace("-", "–")}`}
+        subtitle={`Budget, spend, leads and admissions are entered by hand in Data entry · session ${cycle.replace("-", "–")}`}
         actions={
           <ExportButtons
             name={`budget-outreach-${cycle}`}
@@ -117,7 +117,12 @@ function Budget() {
         </Panel>
       </div>
 
-      <Panel className="mt-4" title="Outcomes by activity" sub="leads from the matching LeadSquared source group · admissions from FABS matched to a lead">
+      <Panel
+        className="mt-4"
+        title="Outcomes by activity"
+        sub="spend, activities, leads and admissions as entered in Data entry → Spend & outcomes log"
+        actions={can("marketing.edit") ? <button onClick={() => setTab("entry")} className="rounded-md px-2.5 py-1 text-xs font-semibold text-brand-700 ring-1 ring-brand-200 hover:bg-brand-50">Enter data</button> : undefined}
+      >
         <div className="overflow-x-auto scroll-thin">
           <table className="w-full text-sm tabular">
             <thead>
