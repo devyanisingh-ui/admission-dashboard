@@ -86,7 +86,7 @@ function Partners() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-5">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="violet" icon={Handshake} label="Connected partners" value={partners.length} change={null} sub={`${active} active · ${partners.length - active} inactive`} />
         <SnapshotCard theme="blue" icon={Users} label="Leads shared" value={leads} change={null} sub={`${fmt(Math.round(leads / Math.max(1, partners.length)))} per partner on average`} />
         <SnapshotCard theme="green" icon={GraduationCap} label="Admissions" value={admissions} change={null} sub="Fee paid in FABS" />

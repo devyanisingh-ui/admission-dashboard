@@ -181,7 +181,7 @@ function SaasView({ locs, t }: { locs: Location[]; t: T }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="blue" icon={FileText} label="Registration forms" value={sum("forms")} change={null} sub="Submitted on school websites" />
         <SnapshotCard theme="green" icon={Link2} label="Linked to a LeadSquared lead" value={sum("linked")} change={null} sub="SaaS form ID stored on the lead" />
         <SnapshotCard theme={sum("pending") ? "orange" : "green"} icon={Hourglass} label="Not yet in LeadSquared" value={sum("pending")} change={null} sub="Waiting for the SaaS → LeadSquared sync" />
@@ -265,7 +265,7 @@ function CrmView({ locs, t }: { locs: Location[]; t: T }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="blue" icon={Users} label="Leads (all sources)" value={t.leads} change={null} sub="After LeadSquared de-duplication" />
         <SnapshotCard theme="violet" icon={FileText} label="Offer Letter" value={t.offers} change={null} sub="Status: Offer Letter" />
         <SnapshotCard theme="green" icon={UserCheck} label="Admission / Orientation" value={t.crmConfirmed} change={null} sub="Marked by counsellors" />
@@ -399,7 +399,7 @@ function FabsView({ locs, t }: { locs: Location[]; t: T }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="green" icon={GraduationCap} label="New admissions (fee paid)" value={t.enrolled} change={null} sub="Admission no. generated" />
         <SnapshotCard theme="blue" icon={Users} label="Active roster" value={strength} change={null} sub="Current strength" />
         <SnapshotCard theme="rose" icon={UserMinus} label="Withdrawals" value={t.withdrawnNew + t.withdrawnExisting} change={null} sub={`${t.withdrawnNew} new · ${t.withdrawnExisting} existing`} />

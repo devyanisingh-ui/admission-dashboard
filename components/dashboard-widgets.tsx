@@ -41,26 +41,30 @@ export function SnapshotCard({
   const t = SNAP_THEME[theme];
   const good = change !== null && (lowerIsBetter ? change <= 0 : change >= 0);
   return (
-    <div className={clsx("rounded-xl border p-4", t.bg, t.border)}>
-      <span className={clsx("grid h-11 w-11 place-items-center rounded-full", t.icon)}><Icon size={22} /></span>
-      <div className="mt-3 text-sm font-semibold text-brand-900">{label}</div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <span className="text-[28px] font-bold leading-none tracking-tight text-slate-900 tabular">{typeof value === "number" ? fmt(value) : value}</span>
+    <div className={clsx("@container rounded-xl border p-3.5", t.bg, t.border)}>
+      {/* Icon, name and figure share one line; the comparison and description sit underneath.
+          The name never shrinks below its longest word, so it cannot run under the figure. */}
+      <div className="flex items-center gap-2.5">
+        <span className={clsx("grid h-9 w-9 shrink-0 place-items-center rounded-full", t.icon)}><Icon size={18} /></span>
+        <span className="flex-1 text-[13px] font-semibold leading-tight text-brand-900 @2xs:text-sm">{label}</span>
+        <span className="shrink-0 text-xl font-bold leading-none tracking-tight text-slate-900 tabular @2xs:text-2xl">{typeof value === "number" ? fmt(value) : value}</span>
+      </div>
+      <div className="mt-2 flex items-start gap-2 text-xs text-slate-500">
         {change !== null && (
-          <span className={clsx("inline-flex items-center text-sm font-semibold", good ? "text-emerald-600" : "text-rose-600")} title="vs same period last year">
-            {change >= 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+          <span className={clsx("inline-flex shrink-0 items-center font-semibold", good ? "text-emerald-600" : "text-rose-600")} title="vs same period last year">
+            {change >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
             {Math.abs(change).toFixed(0)}%
           </span>
         )}
+        <span className="min-w-0">{sub}</span>
       </div>
-      <div className="mt-2 text-xs text-slate-500">{sub}</div>
     </div>
   );
 }
 
 export function SnapshotCards({ d }: { d: DashboardData }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-5">
+    <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
       <SnapshotCard theme="blue" icon={Users} label="Total Leads" value={d.cur.leads} change={d.change("leads")} sub="Enquiries received" />
       <SnapshotCard theme="green" icon={ClipboardList} label="Applications" value={d.cur.applications} change={d.change("applications")} sub="Applications submitted" />
       <SnapshotCard theme="violet" icon={GraduationCap} label="Admissions" value={d.cur.admissions} change={d.change("admissions")} sub="Confirmed admissions (fee paid)" />

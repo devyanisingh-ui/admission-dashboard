@@ -76,7 +76,7 @@ export default function AlertsPage() {
         subtitle={`Raised by the rules engine on each sync and daily · delivered in-app · ${filteredLocations.length === 1 ? filteredLocations[0].name : `${filteredLocations.length} schools`}`}
       />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="rose" icon={AlertOctagon} label="High" value={count("high")} change={null} sub="Act today — data or targets at risk" />
         <SnapshotCard theme="orange" icon={AlertTriangle} label="Medium" value={count("medium")} change={null} sub="Needs attention this week" />
         <SnapshotCard theme="blue" icon={Info} label="Low" value={count("low")} change={null} sub="For information" />

@@ -134,7 +134,7 @@ function Drilldown() {
         context={[`Session ${app.cycle.replace("-", " – ")}`, app.sourceGroup === "All" ? "All sources" : `${app.sourceGroup} leads`, range]}
       />
 
-      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
+      <div className="mt-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="blue" icon={Users} label="Leads" value={stats.leads} change={stats.change.leads} sub="Enquiries (LeadSquared)" />
         <SnapshotCard theme="green" icon={ClipboardList} label="Applications" value={stats.applications} change={stats.change.applications} sub="Registrations (SaaS)" />
         <SnapshotCard theme="violet" icon={GraduationCap} label="Admissions" value={stats.admissions} change={stats.change.admissions} sub={`${pctFmt(stats.conversion)} of leads · fee paid (FABS)`} />

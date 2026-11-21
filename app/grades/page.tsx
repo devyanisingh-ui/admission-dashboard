@@ -140,7 +140,7 @@ function Grades() {
       />
       {editTargets && <TargetsEditor locations={heatLocs} initialId={heatLocs.length === 1 ? heatLocs[0].id : undefined} onClose={() => setEditTargets(false)} />}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
+      <div className="mb-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="blue" icon={Armchair} label="Seats for new admission" value={tot.seats} change={null} sub={`Across ${rows.length} ${label.toLowerCase()}s`} />
         <SnapshotCard theme="violet" icon={GraduationCap} label="Admitted (net)" value={tot.net} change={null} sub="FABS enrolled − withdrawals" />
         <SnapshotCard theme={fill >= 82 ? "green" : fill >= 72 ? "orange" : "rose"} icon={Percent} label="Seat fill" value={fmtPct(fill)} change={null} sub="vs 82% trajectory" />

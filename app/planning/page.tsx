@@ -377,7 +377,7 @@ function SeatMatrix() {
         </div>
       ) : (
         <>
-          <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
+          <div className="mb-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
             <SnapshotCard theme="blue" icon={School} label="Total intake" value={tot.intake} change={null} sub={`${fmt(tot.continuing)} continuing + ${fmt(tot.seats)} new`} />
             <SnapshotCard theme="violet" icon={Armchair} label="Seats for new admission" value={tot.seats} change={null} sub={tot.ews ? `incl. ${fmt(tot.ews)} EWS/DG reserved` : "No EWS/DG reservation"} />
             <SnapshotCard theme="green" icon={GraduationCap} label="Filled (FABS, net)" value={started ? tot.net : "—"} change={null} sub={started ? "Enrolled − new-admission withdrawals" : "Cycle not started"} />
@@ -934,7 +934,7 @@ function Targets() {
         <span className="text-xs text-slate-500">Cycle {cycle.replace("-", "–")} · set by the Vertical Admissions Head · achievement uses FABS-enrolled</span>
       </Toolbar>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-5">
+      <div className="mb-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="blue" icon={Target} label="Total target" value={total} change={null} sub={`${fmtPct(pct(total, seats), 0)} of ${fmt(seats)} seats for new admission`} />
         <SnapshotCard theme="violet" icon={GraduationCap} label="FABS enrolled" value={enrolled} change={null} sub="Fee paid, admission no. generated" />
         <SnapshotCard

@@ -63,7 +63,7 @@ function Budget() {
         ]}
       />
       {tab === "entry" ? <BudgetEntry /> : <>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="blue" icon={Wallet} label="Budget allocated" value={fmtINR(t.allocated)} change={null} sub={`${filteredLocations.length} school${filteredLocations.length === 1 ? "" : "s"} · annual plan`} />
         <SnapshotCard theme="orange" icon={IndianRupee} label="Actual spend" value={fmtINR(t.spent)} change={null} sub={`${util.toFixed(0)}% of budget utilised`} />
         <SnapshotCard theme="blue" icon={PiggyBank} label="Budget remaining" value={fmtINR(Math.max(0, t.allocated - t.spent))} change={null} sub={t.spent > t.allocated ? "Over budget" : "Available for the rest of the cycle"} />

@@ -118,7 +118,7 @@ function MappingQueue() {
         actions={<LocationPicker />}
       />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-5">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="violet" icon={Sparkles} label="Suggested matches" value={suggested.length} change={null} sub="Confirm or reject in one click" />
         <SnapshotCard theme="orange" icon={SearchX} label="Unmatched" value={unmatched.length} change={null} sub="Find the lead or mark Direct" />
         <SnapshotCard theme={overdue ? "rose" : "green"} icon={Clock} label="Over 48 hours" value={overdue} change={null} sub={overdue ? "Past the 48-hour target — alert raised" : "Everything within 48 hours"} />

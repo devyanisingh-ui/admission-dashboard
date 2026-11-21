@@ -92,7 +92,7 @@ function Withdrawals() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-5">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="rose" icon={UserMinus} label="Withdrawals" value={wTotal} change={null} sub={`${wRate.toFixed(1)}% of students on roll this year`} />
         <SnapshotCard theme="rose" icon={UserRoundX} label="New-admission withdrawn" value={t.withdrawnNew} change={null} sub={`${newRate.toFixed(1)}% of ${fmt(t.enrolled)} new admissions`} />
         <SnapshotCard theme="orange" icon={Percent} label="Existing-student withdrawn" value={t.withdrawnExisting} change={null} sub={`${exRate.toFixed(1)}% of ${fmt(t.continuing)} continuing students`} />

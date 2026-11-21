@@ -76,7 +76,7 @@ function Social() {
         ]}
       />
       {tab === "entry" ? <SocialEntry /> : <>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="blue" icon={Radio} label="Reach" value={compact(reach)} change={null} sub="Unique accounts reached" />
         <SnapshotCard theme="violet" icon={Eye} label="Impressions" value={compact(impressions)} change={null} sub={`${(impressions / Math.max(1, reach)).toFixed(1)} views per account`} />
         <SnapshotCard theme="rose" icon={Heart} label="Interactions" value={compact(interactions)} change={null} sub={`${engagement.toFixed(2)}% engagement rate`} />
