@@ -10,6 +10,8 @@ import { useApp } from "@/lib/context";
 import type { Board, Vertical } from "@/lib/data";
 import { BOARDS, describeChanges, newId, SYS_LABEL, SYSTEMS, type LocationRec, type Sys, type UnitRec } from "@/lib/masters";
 import { EditBadge, EmptyRow, plural, sameText, tdc, thL, thR, useListFilter, type TabProps } from "./shared";
+import { BulkUpload } from "@/components/bulk-upload";
+import { locationSpec } from "./upload-specs";
 
 type Confirm = { kind: "delete" | "deactivate"; id: string } | null;
 
@@ -24,6 +26,7 @@ export function LocationsTab({ store, commit }: TabProps) {
   const rows = store.locations.filter((l) => vertical === "All" || l.vertical === vertical);
   const f = useListFilter(rows, (l) => `${l.name} ${l.short} ${l.city} ${Object.values(l.codes).join(" ")}`);
   const [editing, setEditing] = useState<LocationRec | "new" | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const unitsOf = (id: string) => store.units.filter((u) => u.locId === id);
   const target = confirm ? store.locations.find((l) => l.id === confirm.id) : undefined;
@@ -57,7 +60,7 @@ export function LocationsTab({ store, commit }: TabProps) {
       <MasterToolbar
         q={f.q} setQ={f.setQ} placeholder="Search name, city or code"
         showInactive={f.showInactive} setShowInactive={f.setShowInactive} inactiveCount={f.inactiveCount}
-        canEdit={canEdit} onAdd={() => setEditing("new")} addLabel="Add location"
+        canEdit={canEdit} onAdd={() => setEditing("new")} addLabel="Add location" onUpload={() => setUploading(true)}
       >
         <Dropdown<Vertical | "All">
           size="sm" ariaLabel="Vertical" value={vertical} onChange={setVertical}
@@ -114,6 +117,7 @@ export function LocationsTab({ store, commit }: TabProps) {
       <div className="mt-3"><Note>New locations start with no data. Leads and admissions appear once the codes match records in SaaS, LeadSquared and FABS on the next sync.</Note></div>
 
       {editing && <LocationEditor key={editing === "new" ? "new" : editing.id} row={editing === "new" ? null : editing} all={store.locations} onClose={() => setEditing(null)} onSave={save} />}
+      {uploading && <BulkUpload title="Upload locations" spec={locationSpec(store, commit)} onClose={() => setUploading(false)} />}
       {confirm && target && (
         confirm.kind === "delete" ? (
           <ConfirmDialog title={`Delete ${target.name}?`} confirmLabel="Delete location" onConfirm={() => remove(target)} onClose={() => setConfirm(null)}>

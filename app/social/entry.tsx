@@ -7,6 +7,8 @@ import {
   EntryActions, EntryBanner, EntryToast, EntryToolbar, NumberField, Pager, SegTabs, StampCell, inr, num, recentFirst, useEntryStore,
 } from "@/components/entry-kit";
 import { Card, fmt } from "@/components/ui";
+import { BulkUpload } from "@/components/bulk-upload";
+import { campaignSpec, socialSpec } from "@/components/upload-specs";
 import { useApp } from "@/lib/context";
 import { CYCLE_MONTHS, locationById } from "@/lib/data";
 import { cycleData, newEntryId, SOCIAL_PLATFORMS, type CampaignRec, type SocialPlatform, type SocialRec } from "@/lib/marketing";
@@ -98,6 +100,8 @@ function Metrics({ rows, canEdit, entry }: { rows: SocialRec[]; canEdit: boolean
   const st = useListState();
   const [editing, setEditing] = useState<SocialRec | "new" | null>(null);
   const [deleting, setDeleting] = useState<SocialRec | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const { allowedLocations, cycle } = useApp();
   const list = rows
     .filter((r) => st.match(r, `${locationById(r.locationId).short} ${r.platform}`))
     .sort((a, b) => byMonthDesc(a, b) || SOCIAL_PLATFORMS.indexOf(a.platform) - SOCIAL_PLATFORMS.indexOf(b.platform));
@@ -106,7 +110,7 @@ function Metrics({ rows, canEdit, entry }: { rows: SocialRec[]; canEdit: boolean
 
   return (
     <Card bodyClass="p-4">
-      <EntryToolbar q={st.q} setQ={st.setQ} placeholder="Search school or platform" onAdd={() => setEditing("new")} addLabel="Add month" canEdit={canEdit}>
+      <EntryToolbar q={st.q} setQ={st.setQ} placeholder="Search school or platform" onAdd={() => setEditing("new")} addLabel="Add month" canEdit={canEdit} onUpload={() => setUploading(true)}>
         <Filters {...st} />
       </EntryToolbar>
       <div className="relative overflow-x-auto scroll-thin">
@@ -160,6 +164,7 @@ function Metrics({ rows, canEdit, entry }: { rows: SocialRec[]; canEdit: boolean
       <Pager shown={shown.length} total={list.length} showAll={st.showAll} setShowAll={st.setShowAll} />
 
       {editing && <MetricEditor row={editing === "new" ? null : editing} rows={rows} entry={entry} onClose={() => setEditing(null)} />}
+      {uploading && <BulkUpload title="Upload monthly platform figures" spec={socialSpec(allowedLocations, cycleData(cycle, entry.store), entry)} onClose={() => setUploading(false)} />}
       {deleting && (
         <ConfirmDialog
           title="Delete monthly figures?"
@@ -243,13 +248,15 @@ function Campaigns({ rows, canEdit, entry }: { rows: CampaignRec[]; canEdit: boo
   const st = useListState();
   const [editing, setEditing] = useState<CampaignRec | "new" | null>(null);
   const [deleting, setDeleting] = useState<CampaignRec | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const { allowedLocations, cycle } = useApp();
   const list = rows.filter((r) => st.match(r, `${r.name} ${locationById(r.locationId).short} ${r.platform}`)).sort(byMonthDesc);
   const shown = st.showAll ? list : list.slice(0, PAGE);
   const tot = list.reduce((a, r) => ({ spend: a.spend + r.spend, reach: a.reach + r.reach, clicks: a.clicks + r.clicks, leads: a.leads + r.leads }), { spend: 0, reach: 0, clicks: 0, leads: 0 });
 
   return (
     <Card bodyClass="p-4">
-      <EntryToolbar q={st.q} setQ={st.setQ} placeholder="Search campaign, school or platform" onAdd={() => setEditing("new")} addLabel="Add campaign" canEdit={canEdit}>
+      <EntryToolbar q={st.q} setQ={st.setQ} placeholder="Search campaign, school or platform" onAdd={() => setEditing("new")} addLabel="Add campaign" canEdit={canEdit} onUpload={() => setUploading(true)}>
         <Filters {...st} />
       </EntryToolbar>
       <div className="relative overflow-x-auto scroll-thin">
@@ -302,6 +309,7 @@ function Campaigns({ rows, canEdit, entry }: { rows: CampaignRec[]; canEdit: boo
       <Pager shown={shown.length} total={list.length} showAll={st.showAll} setShowAll={st.setShowAll} />
 
       {editing && <CampaignEditor row={editing === "new" ? null : editing} rows={rows} entry={entry} onClose={() => setEditing(null)} />}
+      {uploading && <BulkUpload title="Upload paid campaigns" spec={campaignSpec(allowedLocations, cycleData(cycle, entry.store), entry)} onClose={() => setUploading(false)} />}
       {deleting && (
         <ConfirmDialog
           title="Delete campaign?"

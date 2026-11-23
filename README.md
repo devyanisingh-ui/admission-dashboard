@@ -63,6 +63,7 @@ Open <http://localhost:3000>.
 
   Changes apply across every page immediately. Records that already have history can only be deactivated, never hard-deleted.
 - **Administration** — users, sync jobs and the audit log.
+- **Bulk upload (CSV)** — an *Upload CSV* button beside *Add* imports many rows at once for budget allocations, the spend log, monthly social figures, paid campaigns, admission targets (Seat Matrix & Targets → Admission targets) and the Locations, Lead sources, Withdrawal reasons and Outreach activities masters. Download the template, fill it in (Excel → Save as CSV), upload it and review every row before importing: rows that fail a check are listed with the reason, skipped, and can be downloaded to fix. Imports only add new records — rows for records that already exist are skipped (a target replaces the current one, since each grade has a single target). Each import is one logged change.
 
 ---
 
@@ -119,6 +120,7 @@ lib/
   dashboard.ts       Dashboard figures and quick insights for the current filters
   drilldown.ts       Drill-down hierarchy and records
   seat-matrix.ts     Seat Matrix store, cycles and CSV upload
+  csv.ts             CSV parsing helpers for bulk uploads
   masters.ts         Master-data store, seeds and change log
   marketing.ts       Entered budget, spend, social and target data, plus report figures
   context.tsx        App state: role, filters, seat and master stores

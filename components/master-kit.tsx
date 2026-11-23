@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { AlertTriangle, Archive, ArchiveRestore, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { AlertTriangle, Archive, ArchiveRestore, Pencil, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Drawer } from "./drawer";
@@ -9,11 +9,11 @@ import { Badge, Button } from "./ui";
 
 /** Search, "show inactive" switch and the Add button above a master table. */
 export function MasterToolbar({
-  q, setQ, placeholder, showInactive, setShowInactive, inactiveCount, onAdd, addLabel, canEdit, children,
+  q, setQ, placeholder, showInactive, setShowInactive, inactiveCount, onAdd, addLabel, canEdit, children, onUpload,
 }: {
   q: string; setQ: (v: string) => void; placeholder: string;
   showInactive: boolean; setShowInactive: (v: boolean) => void; inactiveCount: number;
-  onAdd?: () => void; addLabel?: string; canEdit: boolean; children?: ReactNode;
+  onAdd?: () => void; addLabel?: string; canEdit: boolean; children?: ReactNode; /** Opens the bulk CSV upload. */ onUpload?: () => void;
 }) {
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -27,10 +27,15 @@ export function MasterToolbar({
         <input type="checkbox" className="h-3.5 w-3.5 accent-brand-600" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} disabled={!inactiveCount} />
         Show inactive <span className="rounded-full bg-slate-100 px-1.5 text-xs tabular">{inactiveCount}</span>
       </label>
-      {canEdit && onAdd && (
-        <Button variant="primary" size="sm" className="ml-auto" onClick={onAdd}>
-          <Plus size={13} /> {addLabel ?? "Add"}
-        </Button>
+      {canEdit && (onAdd || onUpload) && (
+        <div className="ml-auto flex items-center gap-2">
+          {onUpload && <Button size="sm" onClick={onUpload} title="Add many records at once from a CSV file"><Upload size={13} /> Upload CSV</Button>}
+          {onAdd && (
+            <Button variant="primary" size="sm" onClick={onAdd}>
+              <Plus size={13} /> {addLabel ?? "Add"}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

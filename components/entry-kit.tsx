@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { CheckCircle2, Info, Lock, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { CheckCircle2, Info, Lock, Pencil, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { nowLabel } from "@/lib/seat-matrix";
 import { useApp } from "@/lib/context";
@@ -87,8 +87,8 @@ export function SegTabs<T extends string>({ value, onChange, options }: { value:
 
 /** Search box, filters and the Add button above a data-entry table. */
 export function EntryToolbar({
-  q, setQ, placeholder, children, onAdd, addLabel, canEdit,
-}: { q: string; setQ: (v: string) => void; placeholder: string; children?: ReactNode; onAdd: () => void; addLabel: string; canEdit: boolean }) {
+  q, setQ, placeholder, children, onAdd, addLabel, canEdit, onUpload,
+}: { q: string; setQ: (v: string) => void; placeholder: string; children?: ReactNode; onAdd: () => void; addLabel: string; canEdit: boolean; /** Opens the bulk CSV upload. */ onUpload?: () => void }) {
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <label className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 sm:w-64">
@@ -98,7 +98,10 @@ export function EntryToolbar({
       </label>
       {children}
       {canEdit ? (
-        <Button variant="primary" size="sm" className="ml-auto" onClick={onAdd}><Plus size={13} /> {addLabel}</Button>
+        <div className="ml-auto flex items-center gap-2">
+          {onUpload && <Button size="sm" onClick={onUpload} title="Add many entries at once from a CSV file"><Upload size={13} /> Upload CSV</Button>}
+          <Button variant="primary" size="sm" onClick={onAdd}><Plus size={13} /> {addLabel}</Button>
+        </div>
       ) : (
         <Badge className="ml-auto"><Lock size={11} /> View only</Badge>
       )}

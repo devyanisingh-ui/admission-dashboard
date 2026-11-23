@@ -11,6 +11,8 @@ import { SOURCE_GROUPS, type SourceGroup } from "@/lib/data";
 import { downloadCsv } from "@/lib/export";
 import { describeChanges, newId, REASON_SCOPES, type ActivityRec, type AuditAction, type MasterKey, type ReasonRec, type SourceRec } from "@/lib/masters";
 import { EditBadge, EmptyRow, sameText, tdc, thL, thR, useListFilter, type TabProps } from "./shared";
+import { BulkUpload } from "@/components/bulk-upload";
+import { activitySpec, reasonSpec, sourceSpec } from "./upload-specs";
 
 type Confirm = { kind: "delete" | "deactivate"; id: string } | null;
 
@@ -28,6 +30,7 @@ export function SourcesTab({ store, commit }: TabProps) {
   const canEdit = can("locationMaster.edit");
   const f = useListFilter(store.sources, (s) => `${s.name} ${s.group}`);
   const [editing, setEditing] = useState<SourceRec | "new" | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const target = confirm ? store.sources.find((s) => s.id === confirm.id) : undefined;
 
@@ -49,7 +52,7 @@ export function SourcesTab({ store, commit }: TabProps) {
       <MasterToolbar
         q={f.q} setQ={f.setQ} placeholder="Search lead source or group"
         showInactive={f.showInactive} setShowInactive={f.setShowInactive} inactiveCount={f.inactiveCount}
-        canEdit={canEdit} onAdd={() => setEditing("new")} addLabel="Add lead source"
+        canEdit={canEdit} onAdd={() => setEditing("new")} addLabel="Add lead source" onUpload={() => setUploading(true)}
       />
       <Card title="Lead sources" subtitle="Each LeadSquared / SaaS lead source rolls up to one reporting group used by the Lead Source filter and source charts" bodyClass="p-0" actions={canEdit ? undefined : <EditBadge editable={false} />}>
         <div className="relative overflow-x-auto scroll-thin">
@@ -84,6 +87,7 @@ export function SourcesTab({ store, commit }: TabProps) {
       </Card>
 
       {editing && <SourceEditor key={editing === "new" ? "new" : editing.id} row={editing === "new" ? null : editing} all={store.sources} onClose={() => setEditing(null)} onSave={save} />}
+      {uploading && <BulkUpload title="Upload lead sources" spec={sourceSpec(store, commit)} onClose={() => setUploading(false)} />}
       {confirm && target && (
         confirm.kind === "delete" ? (
           <ConfirmDialog title={`Delete ${target.name}?`} confirmLabel="Delete lead source" onConfirm={() => remove(target)} onClose={() => setConfirm(null)}>
@@ -131,6 +135,7 @@ export function ReasonsTab({ store, commit }: TabProps) {
   const canEdit = can("locationMaster.edit");
   const f = useListFilter(store.reasons, (r) => `${r.name} ${r.appliesTo}`);
   const [editing, setEditing] = useState<ReasonRec | "new" | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const target = confirm ? store.reasons.find((s) => s.id === confirm.id) : undefined;
 
@@ -152,7 +157,7 @@ export function ReasonsTab({ store, commit }: TabProps) {
       <MasterToolbar
         q={f.q} setQ={f.setQ} placeholder="Search withdrawal reason"
         showInactive={f.showInactive} setShowInactive={f.setShowInactive} inactiveCount={f.inactiveCount}
-        canEdit={canEdit} onAdd={() => setEditing("new")} addLabel="Add reason"
+        canEdit={canEdit} onAdd={() => setEditing("new")} addLabel="Add reason" onUpload={() => setUploading(true)}
       />
       <Card title="Withdrawal reasons" subtitle="Reasons recorded against FABS withdrawals · used by the Withdrawals page and reports" bodyClass="p-0" actions={canEdit ? undefined : <EditBadge editable={false} />}>
         <div className="relative overflow-x-auto scroll-thin">
@@ -187,6 +192,7 @@ export function ReasonsTab({ store, commit }: TabProps) {
       </Card>
 
       {editing && <ReasonEditor key={editing === "new" ? "new" : editing.id} row={editing === "new" ? null : editing} all={store.reasons} onClose={() => setEditing(null)} onSave={save} />}
+      {uploading && <BulkUpload title="Upload withdrawal reasons" spec={reasonSpec(store, commit)} onClose={() => setUploading(false)} />}
       {confirm && target && (
         confirm.kind === "delete" ? (
           <ConfirmDialog title={`Delete ${target.name}?`} confirmLabel="Delete reason" onConfirm={() => remove(target)} onClose={() => setConfirm(null)}>
@@ -233,6 +239,7 @@ export function ActivitiesTab({ store, commit }: TabProps) {
   const canEdit = can("locationMaster.edit");
   const f = useListFilter(store.activities, (a) => `${a.name} ${a.group} ${a.unit}`);
   const [editing, setEditing] = useState<ActivityRec | "new" | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const target = confirm ? store.activities.find((s) => s.id === confirm.id) : undefined;
   // Activities with budgets or spend entered against them can't be deleted.
@@ -267,7 +274,7 @@ export function ActivitiesTab({ store, commit }: TabProps) {
       <MasterToolbar
         q={f.q} setQ={f.setQ} placeholder="Search activity, group or unit"
         showInactive={f.showInactive} setShowInactive={f.setShowInactive} inactiveCount={f.inactiveCount}
-        canEdit={canEdit} onAdd={() => setEditing("new")} addLabel="Add activity"
+        canEdit={canEdit} onAdd={() => setEditing("new")} addLabel="Add activity" onUpload={() => setUploading(true)}
       />
       <Card title="Outreach activities" subtitle="Activities that budgets and spend are entered against in Budget & Outreach · each feeds one lead-source reporting group" bodyClass="p-0" actions={canEdit ? undefined : <EditBadge editable={false} />}>
         <div className="relative overflow-x-auto scroll-thin">
@@ -304,6 +311,7 @@ export function ActivitiesTab({ store, commit }: TabProps) {
       </Card>
 
       {editing && <ActivityEditor key={editing === "new" ? "new" : editing.id} row={editing === "new" ? null : editing} all={store.activities} onClose={() => setEditing(null)} onSave={save} />}
+      {uploading && <BulkUpload title="Upload outreach activities" spec={activitySpec(store, commit)} onClose={() => setUploading(false)} />}
       {confirm && target && (
         confirm.kind === "delete" ? (
           <ConfirmDialog title={`Delete ${target.name}?`} confirmLabel="Delete activity" onConfirm={() => remove(target)} onClose={() => setConfirm(null)}>

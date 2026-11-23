@@ -8,6 +8,8 @@ import {
   EntryActions, EntryBanner, EntryToast, EntryToolbar, NumberField, Pager, SegTabs, StampCell, inr, num, recentFirst, useEntryStore,
 } from "@/components/entry-kit";
 import { Card, fmt } from "@/components/ui";
+import { BulkUpload } from "@/components/bulk-upload";
+import { budgetSpec, spendSpec } from "@/components/upload-specs";
 import { useApp } from "@/lib/context";
 import { CYCLE_MONTHS, locationById, pct } from "@/lib/data";
 import { activityByName, activityOptions, ALL_ACTIVITIES, cycleData, newEntryId, OUTREACH_ACTIVITIES, type BudgetRec, type SpendRec } from "@/lib/marketing";
@@ -84,6 +86,8 @@ function Allocations({ rows, spend, canEdit, entry }: { rows: BudgetRec[]; spend
   const [act, setAct] = useState("all");
   const [editing, setEditing] = useState<BudgetRec | "new" | null>(null);
   const [deleting, setDeleting] = useState<BudgetRec | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const { allowedLocations, cycle } = useApp();
   const spentOf = (b: BudgetRec) => spend.filter((s) => s.locationId === b.locationId && s.activity === b.activity).reduce((a, s) => a + s.amount, 0);
 
   const s = q.trim().toLowerCase();
@@ -95,7 +99,7 @@ function Allocations({ rows, spend, canEdit, entry }: { rows: BudgetRec[]; spend
 
   return (
     <Card bodyClass="p-4">
-      <EntryToolbar q={q} setQ={setQ} placeholder="Search school or activity" onAdd={() => setEditing("new")} addLabel="Add allocation" canEdit={canEdit}>
+      <EntryToolbar q={q} setQ={setQ} placeholder="Search school or activity" onAdd={() => setEditing("new")} addLabel="Add allocation" canEdit={canEdit} onUpload={() => setUploading(true)}>
         <LocationFilter value={loc} onChange={setLoc} />
         <ActivityFilter value={act} onChange={setAct} />
       </EntryToolbar>
@@ -147,6 +151,7 @@ function Allocations({ rows, spend, canEdit, entry }: { rows: BudgetRec[]; spend
       </div>
 
       {editing && <AllocationEditor row={editing === "new" ? null : editing} rows={rows} entry={entry} onClose={() => setEditing(null)} />}
+      {uploading && <BulkUpload title="Upload budget allocations" spec={budgetSpec(allowedLocations, cycleData(cycle, entry.store), entry)} onClose={() => setUploading(false)} />}
       {deleting && (
         <ConfirmDialog
           title="Delete budget allocation?"
@@ -211,6 +216,8 @@ function SpendLog({ rows, canEdit, entry }: { rows: SpendRec[]; canEdit: boolean
   const [showAll, setShowAll] = useState(false);
   const [editing, setEditing] = useState<SpendRec | "new" | null>(null);
   const [deleting, setDeleting] = useState<SpendRec | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const { allowedLocations, cycle } = useApp();
 
   const s = q.trim().toLowerCase();
   const list = rows
@@ -226,7 +233,7 @@ function SpendLog({ rows, canEdit, entry }: { rows: SpendRec[]; canEdit: boolean
 
   return (
     <Card bodyClass="p-4">
-      <EntryToolbar q={q} setQ={(v) => { setQ(v); setShowAll(false); }} placeholder="Search school, activity or note" onAdd={() => setEditing("new")} addLabel="Add spend" canEdit={canEdit}>
+      <EntryToolbar q={q} setQ={(v) => { setQ(v); setShowAll(false); }} placeholder="Search school, activity or note" onAdd={() => setEditing("new")} addLabel="Add spend" canEdit={canEdit} onUpload={() => setUploading(true)}>
         <LocationFilter value={loc} onChange={(v) => { setLoc(v); setShowAll(false); }} />
         <ActivityFilter value={act} onChange={(v) => { setAct(v); setShowAll(false); }} />
         <Dropdown size="sm" ariaLabel="Month" value={month} onChange={(v) => { setMonth(v); setShowAll(false); }} options={[{ value: "all", label: "All months" }, ...CYCLE_MONTHS.map((m) => ({ value: m, label: m }))]} />
@@ -280,6 +287,7 @@ function SpendLog({ rows, canEdit, entry }: { rows: SpendRec[]; canEdit: boolean
       <Pager shown={shown.length} total={list.length} showAll={showAll} setShowAll={setShowAll} />
 
       {editing && <SpendEditor row={editing === "new" ? null : editing} entry={entry} onClose={() => setEditing(null)} />}
+      {uploading && <BulkUpload title="Upload spend entries" spec={spendSpec(allowedLocations, cycleData(cycle, entry.store), entry)} onClose={() => setUploading(false)} />}
       {deleting && (
         <ConfirmDialog
           title="Delete spend entry?"

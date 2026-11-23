@@ -14,6 +14,8 @@ import { downloadCsv } from "@/lib/export";
 import { defaultTarget, locationUnits, pct, type Location, type SeatField, type SeatValues, type UnitStats } from "@/lib/data";
 import { EntryToast, useEntryStore } from "@/components/entry-kit";
 import { ConfirmDialog } from "@/components/master-kit";
+import { BulkUpload } from "@/components/bulk-upload";
+import { targetSpec } from "@/components/upload-specs";
 import { targetKey } from "@/lib/marketing";
 import {
   FIELD_LABEL, LIVE_PLAN_CYCLE, planCyclesFor, blankValues, createMatrix, deleteMatrix, diffRows, matrixOf, parseSeatCsv, templateRows, updateMatrix, withIntake,
@@ -889,7 +891,8 @@ function HistoryCard({ history, className }: { history: HistoryEntry[]; classNam
 /* ------------------------------------------------------------------ */
 
 function Targets() {
-  const { can, cycle, seatVersion } = useApp();
+  const { can, cycle, seatVersion, allowedLocations, filteredLocations } = useApp();
+  const [uploading, setUploading] = useState(false);
   const loc = useCurrentLocation();
   const canEdit = can("targets.edit");
   const units = useMemo(() => locationUnits(loc.id, cycle), [loc.id, cycle, seatVersion]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -927,6 +930,8 @@ function Targets() {
               <Button size="sm" variant="ghost" onClick={() => setTargets({})}>Discard</Button>
               <Button size="sm" variant="primary" onClick={saveTargets}><Check size={13} /> Save {changed} target{changed === 1 ? "" : "s"}</Button>
             </>
+          ) : canEdit ? (
+            <Button size="sm" onClick={() => setUploading(true)} title="Set targets for many schools and grades at once from a CSV file"><Upload size={13} /> Upload CSV</Button>
           ) : undefined
         }
       >
@@ -1044,6 +1049,13 @@ function Targets() {
           {loc.vertical === "Higher Ed" && <Note tone="warn">Open item #4: Higher Ed target structure (per programme or per batch) to be confirmed.</Note>}
         </div>
       </div>
+      {uploading && (
+        <BulkUpload
+          title="Upload admission targets"
+          spec={targetSpec(allowedLocations, filteredLocations.some((l) => l.id === loc.id) ? filteredLocations : [loc], cycle, entry)}
+          onClose={() => setUploading(false)}
+        />
+      )}
       <EntryToast text={entry.toast} onClose={entry.clearToast} />
     </>
   );
