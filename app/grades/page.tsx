@@ -3,14 +3,13 @@
 import clsx from "clsx";
 import { AlertTriangle, Armchair, DoorOpen, GraduationCap, Pencil, Percent, Target } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Heatmap, HeatList, type HeatRow } from "@/components/charts";
 import { GradeVacancy, Panel, SnapshotCard, fillColor } from "@/components/dashboard-widgets";
 import { ExportButtons } from "@/components/export-buttons";
 import { TargetsEditor } from "@/components/targets-editor";
 import { Button, Guard, PageHeader, ProgressBar, fmt, fmtPct } from "@/components/ui";
 import { useApp } from "@/lib/context";
 import { dashboardData } from "@/lib/dashboard";
-import { locationById, locationUnits, pct, schoolGrades } from "@/lib/data";
+import { locationById, locationUnits, pct } from "@/lib/data";
 
 export default function GradesPage() {
   return (
@@ -90,15 +89,10 @@ function Grades() {
     return list;
   }, [rows, sort]);
 
-  const heatLocs = filteredLocations.filter((l) => l.vertical === d.gradeVertical);
-  const heatRows: HeatRow[] = heatLocs.map((l) => ({
-    id: l.id,
-    label: l.short,
-    cells: locationUnits(l.id, cycle).map((u) => ({ col: u.unit.replace(" – Y1", ""), net: u.enrolled - u.withdrawnNew, seats: u.seats })),
-  }));
+  const verticalLocs = filteredLocations.filter((l) => l.vertical === d.gradeVertical);
 
   const scopeName =
-    filteredLocations.length === 1 ? filteredLocations[0].name : `${heatLocs.length} ${isSchools ? "schools" : "campuses"}`;
+    filteredLocations.length === 1 ? filteredLocations[0].name : `${verticalLocs.length} ${isSchools ? "schools" : "campuses"}`;
   const toggle = (unit: string) => setSel((s) => (s === unit ? null : unit));
   const th = "whitespace-nowrap px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-slate-500";
   const td = "whitespace-nowrap px-3 py-2 text-right tabular";
@@ -115,7 +109,7 @@ function Grades() {
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-          {can("targets.edit") && heatLocs.length > 0 && (
+          {can("targets.edit") && verticalLocs.length > 0 && (
             <Button size="sm" onClick={() => setEditTargets(true)}><Pencil size={13} /> Edit targets</Button>
           )}
           <ExportButtons
@@ -138,7 +132,7 @@ function Grades() {
           </div>
         }
       />
-      {editTargets && <TargetsEditor locations={heatLocs} initialId={heatLocs.length === 1 ? heatLocs[0].id : undefined} onClose={() => setEditTargets(false)} />}
+      {editTargets && <TargetsEditor locations={verticalLocs} initialId={verticalLocs.length === 1 ? verticalLocs[0].id : undefined} onClose={() => setEditTargets(false)} />}
 
       <div className="mb-4 grid gap-3 grid-cols-[repeat(auto-fit,minmax(15.5rem,1fr))]">
         <SnapshotCard theme="blue" icon={Armchair} label="Seats for new admission" value={tot.seats} change={null} sub={`Across ${rows.length} ${label.toLowerCase()}s`} />
@@ -288,12 +282,6 @@ function Grades() {
           <span className="inline-flex items-center gap-1.5"><span className="h-3 w-0.5 rounded-sm bg-rose-300" /> Below {FILL_WARN}% fill or {ACH_WARN}% of target</span>
         </div>
       </Panel>
-
-      {heatRows.length > 1 && (
-        <Panel className="mt-4" title={`Seat fill by ${isSchools ? "school" : "campus"} and ${label.toLowerCase()}`} sub="Net FABS admissions ÷ seats for new admission">
-          {isSchools ? <Heatmap rows={heatRows} cols={schoolGrades()} footerLabel="All schools" /> : <HeatList rows={heatRows} />}
-        </Panel>
-      )}
     </>
   );
 }
