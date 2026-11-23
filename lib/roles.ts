@@ -117,7 +117,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = ["Dashboards & reports", "Se
 
 export const PERMISSIONS: PermissionDef[] = [
   { id: "view.location", group: "Dashboards & reports", label: "View location dashboards", description: "Dashboard, Drill-down, Grade-wise reports, Withdrawals and Alerts for the role's own scope" },
-  { id: "view.group", group: "Dashboards & reports", label: "View group performance", description: "Cross-location comparison and the school leaderboard", requires: ["view.location"] },
+  { id: "view.group", group: "Dashboards & reports", label: "View group performance", description: "Cross-location view: on track / watch / at risk counts and the seat fill heatmap", requires: ["view.location"] },
   { id: "view.marketing", group: "Dashboards & reports", label: "View marketing reports", description: "Budget & Outreach and Social Media reports" },
   { id: "view.systems", group: "Dashboards & reports", label: "View source-system data", description: "System Views: records as held in LeadSquared, SaaS and FABS" },
   { id: "view.reports", group: "Dashboards & reports", label: "Open the Download Centre", description: "Standard report packs for the role's scope" },

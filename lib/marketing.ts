@@ -4,7 +4,7 @@
  * These figures are entered by hand in the dashboard (Data entry tabs) and saved in the
  * marketing store. Until a cycle is first edited, it shows starting data generated below.
  * Leads per outreach activity are entered with each spend entry; admissions per activity
- * (used only for the dashboard leaderboard's cost per admission) still come from FABS.
+ * still come from FABS (kept in the figures, not shown on any screen).
  */
 import {
   CYCLE_MONTHS, SEED_ACTIVITIES, SEED_LOCATIONS, locationTotals, rng, SOURCE_GROUP_OF, SOURCE_GROUP_SHARE, SOURCE_GROUPS, sourceBreakdown, totalsFor,

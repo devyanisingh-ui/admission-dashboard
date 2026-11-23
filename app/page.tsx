@@ -8,10 +8,9 @@ import { FunnelWide, HeatList, Heatmap, type HeatRow } from "@/components/charts
 import {
   DownloadReportsPanel, GradeVacancy, LeadTrend, QuickInsights, SnapshotCards, SourcePerformance,
 } from "@/components/dashboard-widgets";
-import { ExportButtons } from "@/components/export-buttons";
 import { SchoolStrength } from "@/components/strength-widget";
 import { WeeklySnapshots } from "@/components/weekly-snapshots";
-import { Badge, Card, Guard, Note, Rag, fmt, fmtPct } from "@/components/ui";
+import { Card, Guard, Note, Rag } from "@/components/ui";
 import { rangeLabelOf, useApp } from "@/lib/context";
 import { dashboardData } from "@/lib/dashboard";
 import { kpis, locationById, locationUnits, schoolGrades, sumStats } from "@/lib/data";
@@ -119,52 +118,21 @@ function Dashboard() {
 /* Group / vertical comparison (group roles, more than one school)     */
 /* ------------------------------------------------------------------ */
 
-type SortKey = "leads" | "applications" | "enrolled" | "targetAch" | "seatFill" | "overall" | "withdrawals" | "unmapped";
-const SORT_COLS: { key: SortKey; label: string; lowerIsBetter?: boolean }[] = [
-  { key: "leads", label: "Leads" },
-  { key: "applications", label: "Applications" },
-  { key: "enrolled", label: "Enrolled" },
-  { key: "targetAch", label: "Target ach." },
-  { key: "seatFill", label: "Seat fill" },
-  { key: "overall", label: "Conv." },
-  { key: "withdrawals", label: "Withdrawals", lowerIsBetter: true },
-  { key: "unmapped", label: "Unmapped", lowerIsBetter: true },
-];
-
 function GroupSection() {
   const { filteredLocations, cycle, vertical, grade, sourceGroup, dateRange, customRange } = useApp();
   const router = useRouter();
   const [heat, setHeat] = useState<"Schools" | "Higher Ed">(vertical === "Higher Ed" ? "Higher Ed" : "Schools");
-  const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: "seatFill", desc: true });
 
-  const rows = useMemo(
+  // Seat fill per school (roster figures, so only Grade narrows it) for the on track / watch / at risk counts.
+  const fills = useMemo(
     () =>
-      filteredLocations.filter((l) => grade === "All" || l.units.includes(grade)).map((l) => {
-        // Leads, applications and admissions follow Grade, Lead source and Date range (as the cards above);
-        // seats, targets and withdrawals are roster figures, so only Grade narrows them.
-        const units = locationUnits(l.id, cycle).filter((u) => grade === "All" || u.unit === grade);
-        const base = kpis(sumStats(units));
-        const dd = dashboardData({ ids: [l.id], cycle, grade, sourceGroup, dateRange, custom: customRange });
-        const k = {
-          ...base,
-          leads: dd.cur.leads, applications: dd.cur.applications, enrolled: dd.cur.admissions,
-          overall: base.leads ? (dd.cur.admissions / Math.max(1, dd.cur.leads)) * 100 : 0,
-        };
-        return {
-          loc: l, k,
-          v: {
-            leads: k.leads, applications: k.applications, enrolled: k.enrolled, targetAch: k.targetAch, seatFill: k.seatFill, overall: k.overall,
-            withdrawals: k.withdrawals, unmapped: k.unmapped,
-          } as Record<SortKey, number>,
-        };
-      }),
-    [filteredLocations, cycle, grade, sourceGroup, dateRange, customRange],
+      filteredLocations
+        .filter((l) => grade === "All" || l.units.includes(grade))
+        .map((l) => kpis(sumStats(locationUnits(l.id, cycle).filter((u) => grade === "All" || u.unit === grade))).seatFill),
+    [filteredLocations, cycle, grade],
   );
-  const sorted = [...rows].sort((a, b) => (sort.desc ? b.v[sort.key] - a.v[sort.key] : a.v[sort.key] - b.v[sort.key]));
-  const setSortKey = (key: SortKey) =>
-    setSort((s) => (s.key === key ? { key, desc: !s.desc } : { key, desc: !SORT_COLS.find((c) => c.key === key)!.lowerIsBetter }));
-  const onTrack = rows.filter((r) => r.k.seatFill >= 82).length;
-  const atRisk = rows.filter((r) => r.k.seatFill < 72).length;
+  const onTrack = fills.filter((f) => f >= 82).length;
+  const atRisk = fills.filter((f) => f < 72).length;
 
   const heatVerticals = (["Schools", "Higher Ed"] as const).filter((v) => filteredLocations.some((l) => l.vertical === v));
   const heatTab = heatVerticals.includes(heat) ? heat : (heatVerticals[0] ?? "Schools");
@@ -188,84 +156,18 @@ function GroupSection() {
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wider text-brand-900">Group performance</h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            Rank schools and spot under-filled grades · {filteredLocations.length} {vertical === "Higher Ed" ? "institutions" : "schools"}
+            Spot under-filled grades · {filteredLocations.length} {vertical === "Higher Ed" ? "institutions" : "schools"}
             {grade !== "All" && ` · ${grade.replace(" – Y1", "")}`}{sourceGroup !== "All" && ` · ${sourceGroup} leads`}{dateRange !== "cycle" && ` · ${rangeLabelOf(dateRange, customRange, cycle)}`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700"><Rag value={90} green={82} amber={72} /> {onTrack} on track</span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700"><Rag value={75} green={82} amber={72} /> {rows.length - onTrack - atRisk} watch</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700"><Rag value={75} green={82} amber={72} /> {fills.length - onTrack - atRisk} watch</span>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 font-medium text-rose-700"><Rag value={60} green={82} amber={72} /> {atRisk} at risk</span>
         </div>
       </div>
 
       <Card
-        title="School leaderboard"
-        subtitle="Click a column to sort · RAG on seat fill vs 82% trajectory · click a school to open it in the Drill-down"
-        bodyClass="p-0"
-        actions={
-          <ExportButtons
-            name={`school-leaderboard-${cycle}`}
-            rows={() =>
-              sorted.map(({ loc, k, v }, i) => ({
-                Rank: i + 1, School: loc.name, Vertical: loc.vertical, Board: loc.board, Leads: k.leads, Applications: k.applications, "FABS enrolled": k.enrolled,
-                "Target ach. %": k.targetAch.toFixed(1), "Seat fill %": k.seatFill.toFixed(1), "Conversion %": k.overall.toFixed(1), Withdrawals: k.withdrawals,
-                Unmapped: k.unmapped,
-              }))
-            }
-          />
-        }
-      >
-        <div className="max-h-[420px] overflow-auto scroll-thin">
-          <table className="w-full text-sm tabular">
-            <thead className="sticky top-0 z-10 bg-white shadow-[inset_0_-1px_0_var(--color-slate-200)]">
-              <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
-                <th className="w-10 px-3 py-2 text-left font-medium">#</th>
-                <th className="px-3 py-2 text-left font-medium">School</th>
-                {SORT_COLS.map((c) => (
-                  <th key={c.key} className="px-3 py-2 text-right font-medium">
-                    <button
-                      onClick={() => setSortKey(c.key)}
-                      className={clsx("inline-flex items-center gap-1 uppercase tracking-wide hover:text-slate-800", sort.key === c.key && "text-brand-700")}
-                      aria-sort={sort.key === c.key ? (sort.desc ? "descending" : "ascending") : undefined}
-                    >
-                      {c.label}
-                      <span className={clsx("text-[9px]", sort.key === c.key ? "opacity-100" : "opacity-30")}>{sort.key === c.key && !sort.desc ? "▲" : "▼"}</span>
-                    </button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {sorted.map(({ loc, k, v }, i) => (
-                <tr key={loc.id} className="hover:bg-slate-50">
-                  <td className="px-3 py-2 text-slate-400">{i + 1}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <Rag value={k.seatFill} green={82} amber={72} />
-                      <div className="min-w-0">
-                        <LocLink id={loc.id}><span className="font-medium text-brand-700">{loc.short}</span></LocLink>
-                        <div className="text-[11px] text-slate-400">{loc.vertical} · {loc.board}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-right">{fmt(k.leads)}</td>
-                  <td className="px-3 py-2 text-right">{fmt(k.applications)}</td>
-                  <td className="px-3 py-2 text-right font-semibold">{fmt(k.enrolled)}</td>
-                  <td className="px-3 py-2"><BarCell value={k.targetAch} good={95} ok={80} /></td>
-                  <td className="px-3 py-2"><BarCell value={k.seatFill} good={82} ok={72} /></td>
-                  <td className="px-3 py-2 text-right">{fmtPct(k.overall, 1)}</td>
-                  <td className="px-3 py-2 text-right">{fmt(k.withdrawals)}</td>
-                  <td className="px-3 py-2 text-right">{k.unmapped ? <Badge tone="red">{k.unmapped}</Badge> : <span className="text-slate-400">0</span>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Card
-        className="mt-4"
         title="Seat fill heatmap"
         subtitle={heatTab === "Schools" ? "School × grade · net FABS admissions ÷ seats for new admission" : "Each campus's own first-year programmes · net FABS admissions ÷ seats"}
         actions={heatVerticals.length > 1 ? (
@@ -285,26 +187,5 @@ function GroupSection() {
         )}
       </Card>
     </section>
-  );
-}
-
-/** Percentage with a small bar, coloured green / amber / red against thresholds. */
-function BarCell({ value, good, ok }: { value: number; good: number; ok: number }) {
-  return (
-    <div className="ml-auto flex w-32 items-center gap-2">
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-        <div className={clsx("h-full rounded-full", value >= good ? "bg-emerald-500" : value >= ok ? "bg-amber-400" : "bg-rose-500")} style={{ width: `${Math.min(100, value)}%` }} />
-      </div>
-      <span className={clsx("w-12 text-right text-sm", value < ok ? "font-semibold text-rose-600" : "text-slate-800")}>{value.toFixed(1)}%</span>
-    </div>
-  );
-}
-
-function LocLink({ id, children }: { id: string; children: React.ReactNode }) {
-  const { setLocationId } = useApp();
-  return (
-    <Link href={drillHref({ vertical: locationById(id).vertical, loc: id })} onClick={() => setLocationId(id)} className="hover:underline" title="Open in Drill-down">
-      {children}
-    </Link>
   );
 }
