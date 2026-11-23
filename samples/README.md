@@ -76,3 +76,39 @@ Its deliberate problem rows:
 The Nerul I row matches the current target, so it shows as unchanged.
 
 A grade has a single target, so an uploaded target replaces the current one. To go back to the starting figures, use *Grade-wise Reports › Edit targets › Reset to starting*.
+
+## Social Media
+
+The starting data already has figures for every school, platform and month, so monthly figures can only be added for a new school. File 1 adds one first: a Dwarka campus.
+
+| # | File | Where to upload it | Expected preview |
+|---|------|--------------------|------------------|
+| 1 | `social-media-1-location.csv` | Masters › Locations › Upload CSV | 1 ready (adds *Apeejay School, Dwarka*) |
+| 2 | `social-media-2-monthly-figures.csv` | Social Media › Data entry › Monthly platform figures › Upload CSV | 10 ready, 7 with problems |
+| 3 | `social-media-3-campaigns.csv` | Social Media › Data entry › Paid campaigns › Upload CSV | 8 ready, 7 with problems |
+
+File 3 doesn't use Dwarka, so you can upload it on its own.
+
+**File 2** has Dwarka's figures for all five platforms in October and November. The good rows also show platform names in lower case and the month written as "November" or "11".
+
+Its deliberate problem rows:
+
+- Saket Instagram in November: figures already exist
+- Rohini: not a school in the dashboard
+- TikTok: not a platform in the dashboard
+- Impressions lower than reach
+- Interactions more than impressions
+- Blank prospects
+- A repeat of the first row
+
+**File 3** adds eight new campaigns across schools and Higher Ed, including one with blank clicks and prospects (counted as 0).
+
+Its deliberate problem rows:
+
+- Saket "Board results showcase" in May: already exists
+- Rohini: not a school in the dashboard
+- Snapchat: not a platform in the dashboard
+- Clicks more than reach
+- A campaign name over 60 characters
+- "free" as the spend
+- A repeat of the first row
