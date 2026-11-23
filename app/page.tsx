@@ -9,7 +9,6 @@ import {
   DownloadReportsPanel, GradeVacancy, LeadTrend, QuickInsights, SnapshotCards, SourcePerformance,
 } from "@/components/dashboard-widgets";
 import { ExportButtons } from "@/components/export-buttons";
-import { SegmentComparison } from "@/components/segment-comparison";
 import { SchoolStrength } from "@/components/strength-widget";
 import { WeeklySnapshots } from "@/components/weekly-snapshots";
 import { Badge, Card, Guard, Note, Rag, fmt, fmtPct } from "@/components/ui";
@@ -189,7 +188,7 @@ function GroupSection() {
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wider text-brand-900">Group performance</h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            Compare segments, rank schools and spot under-filled grades · {filteredLocations.length} {vertical === "Higher Ed" ? "institutions" : "schools"}
+            Rank schools and spot under-filled grades · {filteredLocations.length} {vertical === "Higher Ed" ? "institutions" : "schools"}
             {grade !== "All" && ` · ${grade.replace(" – Y1", "")}`}{sourceGroup !== "All" && ` · ${sourceGroup} leads`}{dateRange !== "cycle" && ` · ${rangeLabelOf(dateRange, customRange, cycle)}`}
           </p>
         </div>
@@ -200,12 +199,7 @@ function GroupSection() {
         </div>
       </div>
 
-      <Card title="Segment comparison" subtitle={`Head-to-head on the core KPIs · follows the Vertical, Board${grade !== "All" ? " and Grade" : ""} filters`}>
-        <SegmentComparison locations={filteredLocations} cycle={cycle} grade={grade} />
-      </Card>
-
       <Card
-        className="mt-4"
         title="School leaderboard"
         subtitle="Click a column to sort · RAG on seat fill vs 82% trajectory · click a school to open it in the Drill-down"
         bodyClass="p-0"
