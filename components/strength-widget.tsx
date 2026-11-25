@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { ArrowDownRight, ArrowUpRight, Users } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useApp } from "@/lib/context";
 import { DATA_TODAY, locationUnits, pct, strengthMovement, type Location } from "@/lib/data";
 import { drillHref } from "@/lib/drilldown";
@@ -26,13 +26,6 @@ interface Row {
   withdrawn: number;
   lastYear: number | null;
 }
-
-type Sort = "strength" | "util" | "change";
-const SORTS: { id: Sort; label: string }[] = [
-  { id: "strength", label: "Strength" },
-  { id: "util", label: "Utilisation" },
-  { id: "change", label: "Net change" },
-];
 
 const utilTone = (u: number) => (u >= 90 ? "bg-emerald-500" : u >= 80 ? "bg-amber-400" : "bg-rose-500");
 const utilText = (u: number) => (u >= 90 ? "text-emerald-700" : u >= 80 ? "text-amber-700" : "text-rose-600");
@@ -67,7 +60,6 @@ function gradeRows(l: Location, cycle: Parameters<typeof locationUnits>[1], grad
 
 export function SchoolStrength() {
   const { filteredLocations, cycle, grade, seatVersion } = useApp();
-  const [sort, setSort] = useState<Sort>("strength");
   const single = filteredLocations.length === 1 ? filteredLocations[0] : null;
   const ids = filteredLocations.map((l) => l.id).join();
 
@@ -75,11 +67,8 @@ export function SchoolStrength() {
     () => (single ? gradeRows(single, cycle, grade) : filteredLocations.map((l) => schoolRow(l, cycle, grade))),
     [ids, cycle, grade, seatVersion], // eslint-disable-line react-hooks/exhaustive-deps
   );
-  const sorted = useMemo(() => {
-    if (single && sort === "strength") return rows; // grades read best in grade order
-    const val = (r: Row) => (sort === "util" ? pct(r.strength, r.capacity) : sort === "change" ? r.strength - r.opening : r.strength);
-    return [...rows].sort((a, b) => val(b) - val(a));
-  }, [rows, sort, single]);
+  // Schools by strength, largest first; a single school's grades read best in grade order.
+  const sorted = useMemo(() => (single ? rows : [...rows].sort((a, b) => b.strength - a.strength)), [rows, single]);
 
   const tot = rows.reduce(
     (a, r) => ({ strength: a.strength + r.strength, capacity: a.capacity + r.capacity, opening: a.opening + r.opening, newAdm: a.newAdm + r.newAdm, withdrawn: a.withdrawn + r.withdrawn }),
@@ -102,19 +91,6 @@ export function SchoolStrength() {
       sub={`FABS roster as of ${asOf} · ${single ? `by ${unitWord.toLowerCase()}` : "continuing + new admissions − withdrawals"}${grade !== "All" ? ` · ${grade.replace(" – Y1", "")}` : ""}`}
       actions={
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs" role="tablist" aria-label="Sort by">
-            {SORTS.map((s) => (
-              <button
-                key={s.id}
-                role="tab"
-                aria-selected={sort === s.id}
-                onClick={() => setSort(s.id)}
-                className={clsx("whitespace-nowrap rounded-md px-2.5 py-1 font-medium transition", sort === s.id ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-100")}
-              >
-                {s.id === "strength" && single ? `${unitWord} order` : s.label}
-              </button>
-            ))}
-          </div>
           <Link href="/strength" className="hidden whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-semibold text-brand-700 ring-1 ring-brand-200 hover:bg-brand-50 sm:inline-flex">
             Movement →
           </Link>
