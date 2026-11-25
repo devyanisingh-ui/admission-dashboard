@@ -1,0 +1,26 @@
+Apeejay Admissions Dashboard — how to open
+==========================================
+
+1. Copy this whole folder to the computer (USB drive, network share or email the zip).
+   If you received a .zip file, right-click it and choose "Extract All..." first.
+2. Double-click  apeejay-admissions-dashboard.html
+   It opens in your web browser. Nothing needs to be installed and no internet is needed.
+
+Browsers: Google Chrome, Microsoft Edge, Firefox or Safari (any recent version).
+If the file opens in another program, right-click it > Open with > Chrome (or Edge).
+
+Good to know
+------------
+- Every page works: Dashboard, Drill-down, reports, Budget & Outreach and Social Media
+  data entry, Seat Matrix & Targets, Masters, Administration, exports and downloads.
+- The figures are the demo data built into the file.
+- Anything you enter or change is saved in THIS browser on THIS computer only. It stays
+  after you close the browser, but other people and other computers do not see it.
+  Opening the file in a different browser starts again from the demo data.
+- Pick a demo role (Counsellor, Location Head, Central Admin, ...) from the menu at the
+  top right to see the dashboard as that user.
+- Page links can be bookmarked; they look like
+  apeejay-admissions-dashboard.html#/budget
+
+The file is a snapshot of the dashboard at the time it was built. For a newer version,
+ask for an updated copy (it is produced with "npm run build:html").

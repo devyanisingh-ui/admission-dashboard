@@ -31,18 +31,25 @@ Open <http://localhost:3000>.
 |---|---|
 | `npm run dev` | Start the development server with hot reload |
 | `npm run build` | Create an optimised production build |
-| `npm run build:html` | Build the whole dashboard as **one self-contained HTML file** (see below) |
+| `npm run build:html` | Build the whole dashboard as **one self-contained HTML file** in a ready-to-share folder (see below) |
 | `npm run start` | Serve the production build (run `build` first) |
 | `npm run lint` | Run Next.js linting |
 
 ### Single HTML file
 
-`npm run build:html` writes `dist-html/apeejay-admissions-dashboard.html` (about 1.2 MB): the complete dashboard — every page, chart, filter, data-entry form and export — with all code and styles inside one file. Open it by double-clicking; no server or install is needed, so it can be emailed or shared as a file.
+`npm run build:html` writes a ready-to-share folder, `dist-html/Apeejay Admissions Dashboard/`:
+
+| File | What it is |
+|---|---|
+| `apeejay-admissions-dashboard.html` | The complete dashboard (about 1.4 MB) — every page, chart, filter, data-entry form and export, with all code, styles and the Inter font inside one file |
+| `How to open.txt` | Short instructions for the person receiving it |
+| `Inter font licence.txt` | The font's SIL Open Font License, which must be kept with copies of the font |
+
+Copy the folder (or a zip of it) to any computer and double-click the HTML file. It needs **no server, no install and no internet**, and looks the same as the hosted app.
 
 - Page links use `#`, e.g. `apeejay-admissions-dashboard.html#/budget`; bookmarks and the browser's Back button work as usual.
-- Edits are saved in the viewer's browser, as in the hosted app (see *Data and storage*), and are not shared between people.
-- The Inter font loads from Google Fonts; without internet the file falls back to the system font and otherwise works fully offline.
-- Run it again after changing the app. It bundles the same `app/`, `components/` and `lib/` code with Vite; `standalone/` holds the entry point and small stand-ins for `next/link` and `next/navigation`. A new page folder under `app/` must also be added to `ROUTES` in `standalone/main.tsx` — the build stops with a message if one is missing.
+- Edits are saved in the viewer's browser, as in the hosted app (see *Data and storage*), and are not shared between people or computers.
+- Run it again after changing the app. It bundles the same `app/`, `components/` and `lib/` code with Vite; `standalone/` holds the entry point, the embedded font, the instructions file and small stand-ins for `next/link` and `next/navigation`. A new page folder under `app/` must also be added to `ROUTES` in `standalone/main.tsx` — the build stops with a message if one is missing.
 
 > **Tip:** run only one dev server per project folder. Two servers sharing the same `.next` folder overwrite each other's build files and cause "ChunkLoadError". If that happens, stop the server, delete `.next`, and run `npm run dev` again.
 
@@ -125,7 +132,7 @@ app/                 One folder per page (App Router)
   reports/           Download Centre
   ...                Other reports, operations and admin pages
 components/          Shared UI: shell & filters, charts, dashboard widgets, forms
-standalone/          Single-HTML-file build (npm run build:html): entry, routes, next/* stand-ins
+standalone/          Single-HTML-file build (npm run build:html): entry, routes, font, next/* stand-ins
 lib/
   data.ts            Mock data, locations, unit stats, master lists
   dashboard.ts       Dashboard figures and quick insights for the current filters

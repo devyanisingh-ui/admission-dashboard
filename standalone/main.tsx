@@ -6,6 +6,7 @@
 import { StrictMode, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import "@/app/globals.css";
+import "./fonts.css"; // Inter, embedded so the file looks the same offline
 import { AppProvider } from "@/lib/context";
 import { Shell } from "@/components/shell";
 import { usePathname } from "./next-navigation";

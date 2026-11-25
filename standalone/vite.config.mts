@@ -1,6 +1,10 @@
 /**
- * Single-file build of the dashboard: `npm run build:html` writes dist-html/apeejay-admissions-dashboard.html,
- * one self-contained file (all JavaScript and CSS inlined) that opens by double-clicking, no server needed.
+ * Single-file build of the dashboard: `npm run build:html` writes the folder
+ * dist-html/Apeejay Admissions Dashboard/ — copy it to any computer and double-click the HTML file inside:
+ *   apeejay-admissions-dashboard.html   the whole dashboard; all JavaScript, CSS and the Inter font inlined,
+ *                                       so it needs no server, no install and no internet
+ *   How to open.txt                     instructions for the person receiving it
+ *   Inter font licence.txt              the font's SIL Open Font License, which must travel with it
  *
  * It bundles the real app (app/, components/, lib/) with Vite instead of Next.js. The only Next.js
  * pieces the app uses — next/link and next/navigation — are swapped for small hash-router stand-ins
@@ -16,6 +20,7 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
+const FOLDER = "Apeejay Admissions Dashboard";
 const OUT_NAME = "apeejay-admissions-dashboard.html";
 
 /** Fails the build if a page folder under app/ is missing from ROUTES in main.tsx. */
@@ -33,13 +38,20 @@ function checkRoutes(): Plugin {
   };
 }
 
-/** Names the output file and puts it at the top of the output folder. */
-function renameOutput(): Plugin {
+/** Puts the HTML file in the ready-to-copy folder, with the instructions and the font licence beside it. */
+function packageFolder(): Plugin {
   return {
-    name: "rename-output",
+    name: "package-folder",
     enforce: "post",
     generateBundle(_, bundle) {
-      for (const f of Object.values(bundle)) if (f.fileName.endsWith(".html")) f.fileName = OUT_NAME;
+      for (const f of Object.values(bundle)) if (f.fileName.endsWith(".html")) f.fileName = `${FOLDER}/${OUT_NAME}`;
+      // Windows line endings so the text files read well in Notepad.
+      const crlf = (t: string) => t.replace(/\r?\n/g, "\r\n");
+      this.emitFile({ type: "asset", fileName: `${FOLDER}/How to open.txt`, source: crlf(readFileSync(resolve(here, "How to open.txt"), "utf8")) });
+      this.emitFile({
+        type: "asset", fileName: `${FOLDER}/Inter font licence.txt`,
+        source: crlf(readFileSync(resolve(root, "node_modules/@fontsource-variable/inter/LICENSE"), "utf8")),
+      });
     },
   };
 }
@@ -48,7 +60,7 @@ export default defineConfig({
   // The repo root, so Tailwind finds every class used in app/, components/ and lib/.
   root,
   publicDir: false,
-  plugins: [checkRoutes(), react(), tailwindcss(), viteSingleFile({ removeViteModuleLoader: true }), renameOutput()],
+  plugins: [checkRoutes(), react(), tailwindcss(), viteSingleFile({ removeViteModuleLoader: true }), packageFolder()],
   resolve: {
     alias: [
       { find: /^next\/link$/, replacement: resolve(here, "next-link.tsx") },
